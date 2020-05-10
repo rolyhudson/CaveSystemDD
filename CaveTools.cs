@@ -1,6 +1,7 @@
 ﻿using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ namespace CaveSystem2020
 {
     class CaveTools
     {
+        static Random randomGen = new Random();
         public static Mesh splitTwoPlanes(Plane p1, Plane p2, Mesh m)
         {
             var m1 = split(m, p1);
@@ -108,6 +110,49 @@ namespace CaveSystem2020
             m.Faces.AddFace(vcount, vcount + 1, vcount + 2, vcount + 3);
             m.Faces.AddFace(vcount, vcount + 3, vcount + 4);
         }
-        
+        public static Brep makeCuboid(Plane pln, double width, double depth, double height)
+        {
+            Mesh cell = new Mesh();
+            Box box = new Box(pln, new Interval(-width / 2, width / 2), new Interval(-depth / 2, depth / 2), new Interval(-height / 2, height / 2));
+            //cell = Mesh.CreateFromBox(box, 1, 1, 1);
+            //return cell;
+            return box.ToBrep();
+        }
+        public static Color getRandomColour()
+        {
+
+            KnownColor[] names = (KnownColor[])Enum.GetValues(typeof(KnownColor));
+            KnownColor randomColorName = names[randomGen.Next(names.Length)];
+            Color randomColor = Color.FromKnownColor(randomColorName);
+            return randomColor;
+        }
+        public static Point3d averagePoint(Mesh m)
+        {
+            double x = 0;
+            double y = 0;
+            double z = 0;
+            foreach (Point3d p in m.Vertices)
+            {
+                x += p.X;
+                y += p.Y;
+                z += p.Z;
+            }
+            Point3d centroid = new Point3d(x / m.Vertices.Count, y / m.Vertices.Count, z / m.Vertices.Count);
+            return centroid;
+        }
+        public static Vector3d averageVector(Mesh m)
+        {
+            double x = 0;
+            double y = 0;
+            double z = 0;
+            foreach (var v in m.Normals)
+            {
+                x += v.X;
+                y += v.Y;
+                z += v.Z;
+            }
+            Vector3d centroid = new Vector3d(x / m.Normals.Count, y / m.Normals.Count, z / m.Normals.Count);
+            return centroid;
+        }
     }
 }

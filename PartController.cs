@@ -25,9 +25,9 @@ namespace CaveSystem2020
             meshToVoxelise.Normals.ComputeNormals();
             meshToVoxelise.FaceNormals.ComputeFaceNormals();
             grid = gridLines;
-            
+
             //setText(parameters.partNumber);
-            Slice();
+            SetBays();
         }
         private void SetBays()
         {
@@ -59,7 +59,7 @@ namespace CaveSystem2020
                 Brep minVol = findBBoxGivenPlane(boxPln, slice, ref boundingBox);
                 brepBBoxes.Add(minVol);
                 caveSlices.Add(slice);
-                bayControllers.Add(new BayController());
+                bayControllers.Add(new BayController(slice,minVol,parameters));
 
             }
             //addGrid(boxPln, y);
