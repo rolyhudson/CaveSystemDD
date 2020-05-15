@@ -39,7 +39,11 @@ namespace CaveSystem2020
             pManager.AddNumberParameter("yCell", "y", "", GH_ParamAccess.item, 3000);
             pManager.AddNumberParameter("zCell", "z", "", GH_ParamAccess.item, 1000);
             pManager.AddLineParameter("grid", "g", "", GH_ParamAccess.list);
-           
+            pManager.AddBrepParameter("roof", "r", "", GH_ParamAccess.list);
+            pManager.AddBrepParameter("walls", "w", "", GH_ParamAccess.list);
+            pManager.AddBrepParameter("floors", "f", "", GH_ParamAccess.list);
+
+
         }
 
         /// <summary>
@@ -76,15 +80,20 @@ namespace CaveSystem2020
             double xcell = 0;
             double ycell = 0;
             double zcell = 0;
-
+            List<Brep> roofs = new List<Brep>();
+        List<Brep> walls = new List<Brep>();
+        List<Brep> floors = new List<Brep>();
 
             if (!DA.GetData(0, ref mesh)) return;
             if (!DA.GetData(1, ref xcell)) return;
             if (!DA.GetData(2, ref ycell)) return;
             if (!DA.GetData(3, ref zcell)) return;
             if (!DA.GetDataList(4, bldGrid)) return;
+            if (!DA.GetDataList(5, roofs)) return;
+            if (!DA.GetDataList(6, walls)) return;
+            if (!DA.GetDataList(7, floors)) return;
 
-            Parameters parameters = new Parameters(xcell, ycell, zcell);
+            Parameters parameters = new Parameters(xcell, ycell, zcell,roofs,walls, floors);
             PartController pControl = new PartController(mesh, bldGrid, parameters);
 
             GH_Structure<GH_Mesh> caveSlices = new GH_Structure<GH_Mesh>();

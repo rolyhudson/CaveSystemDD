@@ -57,9 +57,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BayController.cs" />
+    <Compile Include="MeshNode.cs" />
+    <Compile Include="OrientedBox.cs" />
     <Compile Include="CaveSystem2020Component.cs" />
     <Compile Include="CaveSystem2020Info.cs" />
     <Compile Include="CaveTools.cs" />
+    <Compile Include="PanelFrame.cs" />
     <Compile Include="Parameters.cs" />
     <Compile Include="PartController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

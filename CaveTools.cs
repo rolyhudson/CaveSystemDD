@@ -154,5 +154,29 @@ namespace CaveSystem2020
             Vector3d centroid = new Vector3d(x / m.Normals.Count, y / m.Normals.Count, z / m.Normals.Count);
             return centroid;
         }
+        public static Brep findBBoxGivenPlane(Plane pln, Mesh m)
+        {
+            List<Point3d> pts = new List<Point3d>();
+
+            foreach (Point3d p in m.Vertices)
+            {
+                Point3d remapped = new Point3d();
+                pln.RemapToPlaneSpace(p, out remapped);
+
+                pts.Add(remapped);
+            }
+
+            BoundingBox bBox = new BoundingBox(pts);
+            Brep brep = bBox.ToBrep();
+            Transform xform = Transform.PlaneToPlane(Plane.WorldXY, pln);
+            brep.Transform(xform);
+            return brep;
+        }
+        public static OrientedBox FindOrientedBox(Plane pln, Mesh m)
+        {
+            Brep box = findBBoxGivenPlane(pln, m);
+            OrientedBox orientedBox = new OrientedBox(box, pln);
+            return orientedBox;
+        }
     }
 }

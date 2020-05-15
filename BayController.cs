@@ -13,125 +13,94 @@ namespace CaveSystem2020
     {
 
         public Mesh slice = new Mesh();
-        public Brep bayBoundary;
-        public Brep meshBox;
-        public Plane minPlane;
-        public Plane maxPlane;
-        Plane referencePlane;
+        public OrientedBox bayBoundary;
         Parameters parameters;
-
-        public BayController (Mesh mesh,Brep bbox,Parameters iparameters)
+        List<PanelFrame> panelFrames = new List<PanelFrame>();
+       
+        public BayController (Mesh mesh, OrientedBox obox,Parameters iparameters)
         {
             slice = mesh;
-            bayBoundary = bbox;
+            bayBoundary = obox;
             parameters = iparameters;
-            //sliceByFace(1, 2000);
-            //sliceByFace(3, 2000);
-            //midSection();
-            Voxelise();
+            SliceElements();
         }
-        private void midSection()
+        private void SliceElements()
         {
-            Plane plane1 = getFaceOffsetPlane(1, 2000);
-            plane1.Flip();
-            Plane plane2 = getFaceOffsetPlane(3, 2000);
-            plane2.Flip();
-            RhinoDoc.ActiveDoc.Objects.AddMesh(CaveTools.splitTwoPlanes(plane1, plane2, slice));
+            MeshToPanels(midSection(),Orientation.Ceiling);
         }
-        private Mesh sliceByFace(int face,double trimOffset)
+        private void MeshToPanels(Mesh mesh, Orientation orientation)
         {
-            
-            Plane plane = getFaceOffsetPlane(face, trimOffset);
+            OrientedBox orientedBox = CaveTools.FindOrientedBox(bayBoundary.ReferencePlane, mesh);
+            Plane orientationPlane = orientedBox.PlaneSelection(orientation);
 
+            int unitsX = (int)Math.Ceiling(orientedBox.xDim / parameters.xCell);
+            double dimXSpecial = orientedBox.xDim - (unitsX - 1) * parameters.xCell;
 
-            Mesh m = CaveTools.split(slice, plane);
-            RhinoDoc.ActiveDoc.Objects.AddMesh(m);
-            return m;
+            if (dimXSpecial < parameters.cellMin)
+            {
+                unitsX -= 1;
+                dimXSpecial = orientedBox.xDim - (unitsX - 1) * parameters.xCell;
+            }
 
-        }
-        private Plane getFaceOffsetPlane(int face, double trimOffset)
-        {
-            BrepFace brepFace = bayBoundary.Faces[face];
-            Point3d origin = brepFace.PointAt(brepFace.Domain(0).Mid, brepFace.Domain(1).Mid);
-            Vector3d normal = brepFace.NormalAt(brepFace.Domain(0).Mid, brepFace.Domain(1).Mid);
-
-            normal.Unitize();
-
-            origin = origin + (normal * -trimOffset);
-
-            Plane plane = new Plane(origin, normal);
-            return plane;
-        }
-        private Plane BrepFacePlane(Brep brep,int face,bool pointInside)
-        {
-            BrepFace brepFace = brep.Faces[face];
-            Point3d origin = brepFace.PointAt(brepFace.Domain(0).Mid, brepFace.Domain(1).Mid);
-            Vector3d normal = brepFace.NormalAt(brepFace.Domain(0).Mid, brepFace.Domain(1).Mid);
-            Plane plane = new Plane(origin, normal);
-            if (pointInside) plane.Flip();
-            return plane;
-        }
-        private void Voxelise()
-        {
-            double xdim = bayBoundary.Vertices[7].Location.DistanceTo(bayBoundary.Vertices[6].Location);
-            double zdim = bayBoundary.Vertices[7].Location.DistanceTo(bayBoundary.Vertices[3].Location);
-            int unitsX = (int)Math.Ceiling(xdim / 2000);
-            int unitsZ = (int)Math.Ceiling(zdim / 2000);
-            double dimX = xdim / unitsX;
-            double dimZ = zdim / unitsZ;
-            Vector3d xdir = bayBoundary.Vertices[6].Location - bayBoundary.Vertices[7].Location;
-            Vector3d zdir = bayBoundary.Vertices[3].Location - bayBoundary.Vertices[7].Location;
-            Vector3d ydir = bayBoundary.Vertices[4].Location - bayBoundary.Vertices[7].Location;
-            xdir.Unitize();
-            ydir.Unitize();
-            zdir.Unitize();
             for (int x = 0; x < unitsX; x++)
             {
-                for(int z = 0; z < unitsZ; z++)
+                double xPanel = parameters.xCell;
+                Point3d p1 = orientationPlane.Origin + orientationPlane.XAxis * x * parameters.xCell;
+                Point3d p2 = orientationPlane.Origin + orientationPlane.XAxis * (x + 1) * parameters.xCell;
+                if (x == unitsX - 1)
                 {
-                    Vector3d shift = (xdir * dimX * (x+0.5)) + (ydir * 1500) + (zdir * dimZ * (z+0.5));
-                    Point3d origin = bayBoundary.Vertices[7].Location + shift;
-                    Plane plane = new Plane(origin, xdir, ydir);
-                    Brep voxel = CaveTools.makeCuboid(plane, dimX,3000, dimZ);
-                    RhinoDoc.ActiveDoc.Objects.AddBrep(voxel);
-                    Mesh m1 = CaveTools.splitTwoPlanes(BrepFacePlane(voxel, 3,true), BrepFacePlane(voxel, 1, true), slice);
-                    Mesh panel = CaveTools.splitTwoPlanes(BrepFacePlane(voxel, 5, true), BrepFacePlane(voxel, 4, true), m1);
-                    ObjectAttributes oa = new ObjectAttributes();
-                    oa.ObjectColor = CaveTools.getRandomColour();
-                    oa.ColorSource = ObjectColorSource.ColorFromObject;
-                    RhinoDoc.ActiveDoc.Objects.AddMesh(panel,oa);
-
-                    Mesh[] parts = panel.SplitDisjointPieces();
-                    List<BrepFace> supports = new List<BrepFace>()
-                    {
-                        bayBoundary.Faces[1],
-                        bayBoundary.Faces[3],
-                        bayBoundary.Faces[4],
-                        bayBoundary.Faces[5]
-                    };
-                    foreach(Mesh p in parts)
-                    {
-                        Vector3d avNormal = CaveTools.averageVector(p);
-                        avNormal.Reverse();
-                        Point3d avPoint = CaveTools.averagePoint(p);
-                        Line line = new Line(avPoint, avNormal * 100000000);
-                        foreach(BrepFace brepface in supports)
-                        {
-                            Point3d[] points;
-                            Curve[] curves;
-                            double u = 0;
-                            double v = 0;
-                            Rhino.Geometry.Intersect.Intersection.CurveBrepFace(line.ToNurbsCurve(), brepface, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, out curves, out points);
-                            if (points.Length > 0)
-                            {
-                                brepface.ClosestPoint(avPoint, out u, out v);
-                                Line connector = new Line(avPoint, brepface.PointAt(u, v));
-                               //RhinoDoc.ActiveDoc.Objects.AddLine(connector, oa);
-                            }
-                        }
-                    }
+                    xPanel = dimXSpecial;
+                    p2 = orientationPlane.Origin + orientationPlane.XAxis * orientedBox.xDim;
                 }
+                    
+                Plane cut1 = new Plane(p1, orientationPlane.XAxis);
+                Plane cut2 = new Plane(p2, orientationPlane.XAxis * -1);
+                Mesh panel = SelectClosestPanel(CaveTools.splitTwoPlanes(cut1, cut2, mesh), orientationPlane);
+                RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
+
+                Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
+                PanelFrame panelFrame = new PanelFrame(local, xPanel,parameters, panel,x,unitsX);
             }
         }
+        
+        private Mesh midSection()
+        {
+            Plane plane1 = OrientedBox.FaceOffsetPlane(bayBoundary.SideXmax, 2500);
+            plane1.Flip();
+            Plane plane2 = OrientedBox.FaceOffsetPlane(bayBoundary.SideXmin, 2000);
+            plane2.Flip();
+            Mesh ceiling = CaveTools.splitTwoPlanes(plane1, plane2, slice);
+            //RhinoDoc.ActiveDoc.Objects.AddMesh(ceiling);
+            return ceiling;
+        }
+
+        private Mesh SelectClosestPanel(Mesh m, Plane plane)
+        {
+            if (m.DisjointMeshCount > 1)
+            {
+                double minDist = double.MaxValue;
+                Mesh closest = new Mesh();
+                foreach (Mesh d in m.SplitDisjointPieces())
+                {
+                    Point3d centroid = CaveTools.averagePoint(d);
+                    if (centroid.DistanceTo(plane.ClosestPoint(centroid)) < minDist)
+                    {
+                        minDist = centroid.DistanceTo(plane.ClosestPoint(centroid));
+                        closest = d;
+                    }
+                }
+               return closest;
+            }
+            else
+                return m;
+        }
+        
+    }
+    public enum Orientation
+    {
+        Ceiling,
+        Floor,
+        SideNear,
+        SideFar
     }
 }
