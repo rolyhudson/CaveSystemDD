@@ -57,13 +57,10 @@ namespace CaveSystem2020
             {
                 Brep minVol = CaveTools.findBBoxGivenPlane(boxPln, slice);
                 OrientedBox oBox = CaveTools.FindOrientedBox(boxPln, slice);
-                
-                
                 brepBBoxes.Add(oBox.BoundingBox);
                 caveSlices.Add(slice);
                 bayControllers.Add(new BayController(slice,oBox,parameters));
             }
-            //addGrid(boxPln, y);
         }
         
     }
