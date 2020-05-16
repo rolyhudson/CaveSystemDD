@@ -15,13 +15,15 @@ namespace CaveSystem2020
         double ydim;
         Parameters parameters;
         Mesh Panel;
-        Plane FitPlane;
+        Plane FramePlane;
         int number;
         int familyCount;
 
         List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
+        List<List<Point3d>> frameGrid = new List<List<Point3d>>();
         List<Line> hangers = new List<Line>();
         List<Line> frame = new List<Line>();
+        public List<Point3d> frameCorners = new List<Point3d>();
         Mesh GSAmesh;
         public List<List<MeshNode>> meshnodes = new List<List<MeshNode>>();
         public PanelFrame(Plane local, double x, Parameters param, Mesh p,int num, int groupNum)
@@ -37,7 +39,10 @@ namespace CaveSystem2020
             SetPointGrid();
             SetMeshNodes();
             FindMeshNodes();
-            
+            SetFramePlane();
+            SetFrameGrid();
+            SetFrameLines();
+            SetHangerLines();
         }
         private void SetLocalPlane()
         {
@@ -76,16 +81,10 @@ namespace CaveSystem2020
                     row.Add(localPlane.Origin + shift);
                 }
                 nodeGrid.Add(row);
-                CheckPoints(row);
+                CaveTools.CheckPoints(row);
             }
         }
-        private void CheckPoints(List<Point3d> points)
-        {
-            foreach(Point3d p in points)
-            {
-                RhinoDoc.ActiveDoc.Objects.AddPoint(p);
-            }
-        }
+        
         private void SetMeshNodes()
         {
             foreach (List<Point3d> pts in nodeGrid)
@@ -103,24 +102,12 @@ namespace CaveSystem2020
                 List<Curve> row = new List<Curve>();
                 for (int d = 0; d < nodeGrid[c].Count; d++)
                 {
-                    Line edge = new Line(nodeGrid[c][d], Vector3d.ZAxis*-100000);
-                    int[] faceIds;
-                    Point3d[] points = Rhino.Geometry.Intersect.Intersection.MeshLine(Panel, edge, out faceIds);
-                    if (points.Length > 0)
+                    Ray3d ray = new Ray3d(nodeGrid[c][d], localPlane.ZAxis);
+                    double t = Rhino.Geometry.Intersect.Intersection.MeshRay(Panel, ray);
+                    if (t >= 0)
                     {
-                        Point3d closest = new Point3d();
-                        double minD = Double.MaxValue;
-                        foreach (Point3d p in points)
-                        {
-                            if (p.DistanceTo(nodeGrid[c][d]) < minD)
-                            {
-                                closest = p;
-                                minD = p.DistanceTo(nodeGrid[c][d]);
-                            }
-                        }
-                        meshnodes[c][d].point = closest;
+                        meshnodes[c][d].point = ray.PointAt(t);
                         meshnodes[c][d].pointset = true;
-                        
                     }
                     else meshnodes[c][d].pointset = false;
                 }
@@ -164,6 +151,87 @@ namespace CaveSystem2020
                 mesh.Faces.AddFace(0, 1, 2);
             }
             return mesh;
+        }
+        private void SetFramePlane()
+        {
+            List<Point3d> points = meshnodes.SelectMany(d => d.Select(m => m.point)).ToList();
+            Plane.FitPlaneToPoints(points, out FramePlane);
+            if (FramePlane.Normal.Z < 0)
+                FramePlane.Flip();
+            //find closest point above plane
+            double maxDist = double.MinValue;
+            Point3d closest = new Point3d();
+            foreach (Point3d p in points)
+            {
+                if (CaveTools.pointInsidePlane(p, FramePlane))
+                {
+                    double dist = FramePlane.ClosestPoint(p).DistanceTo(p);
+                    if (dist > maxDist)
+                    {
+                        maxDist = dist;
+                        closest = p;
+                    }
+                }
+            }
+            FramePlane.Origin = closest + FramePlane.Normal * parameters.FramePlaneMesh;
+            //OrientedBox.CheckPlane(FramePlane);
+        }
+        private void SetFrameGrid()
+        {
+            for (int c = 0; c < nodeGrid.Count; c++)
+            {
+                List<Point3d> points = new List<Point3d>();
+                for (int d = 0; d < nodeGrid[c].Count; d++)
+                {
+                    double t = 0;
+                    Point3d p = new Point3d();
+                    Line line = new Line(nodeGrid[c][d], localPlane.ZAxis);
+                    
+                    if (Rhino.Geometry.Intersect.Intersection.LinePlane(line, FramePlane, out t))
+                    {
+                        p = line.PointAt(t);
+                        points.Add(p);
+                        if(c == 0 || c == nodeGrid.Count - 1)
+                        {
+                            if(d == 0 || d == nodeGrid[c].Count - 1)
+                                frameCorners.Add(p);
+                        }
+                    }
+                }
+                frameGrid.Add(points);
+            }
+        }
+        private void SetFrameLines()
+        {
+            for (int c = 0; c < frameGrid.Count; c++)
+            {
+                for (int d = 0; d < frameGrid[c].Count; d++)
+                {
+                    if(d < frameGrid[c].Count-1)
+                    {
+                        if(c ==0 || c == frameGrid[c].Count-1)
+                            frame.Add(new Line(frameGrid[c][d], frameGrid[c][d + 1]));
+                    }
+                       
+                    if (c < frameGrid.Count - 1)
+                        frame.Add(new Line(frameGrid[c][d], frameGrid[c + 1][d ]));
+                }
+            }
+            CaveTools.CheckLines(frame);
+        }
+        private void SetHangerLines()
+        {
+            for (int c = 0; c < meshnodes.Count; c++)
+            {
+                for (int d = 0; d < meshnodes[c].Count; d++)
+                {
+
+                    if (meshnodes[c][d].pointset)
+                        hangers.Add(new Line(frameGrid[c][d], meshnodes[c][d].point));
+                    
+                }
+            }
+            CaveTools.CheckLines(hangers);
         }
     }
 }

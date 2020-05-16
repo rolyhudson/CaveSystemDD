@@ -1,4 +1,5 @@
-﻿using Rhino.Geometry;
+﻿using Rhino;
+using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -177,6 +178,37 @@ namespace CaveSystem2020
             Brep box = findBBoxGivenPlane(pln, m);
             OrientedBox orientedBox = new OrientedBox(box, pln);
             return orientedBox;
+        }
+        public static Point3d ClosestProjected(List<Brep> breps, Point3d testPoint,Vector3d direction)
+        {
+            var points = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(breps, new List<Point3d>() { testPoint }, direction, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+            double distMin = double.MaxValue;
+            Point3d closest = new Point3d();
+            foreach(var p in points)
+            {
+                
+                if (p.DistanceTo(testPoint) < distMin)
+                {
+                    distMin = p.DistanceTo(testPoint);
+                    closest = p;
+                }
+            }
+            return closest;
+        }
+        public static void CheckPoints(List<Point3d> points)
+        {
+            foreach (Point3d p in points)
+            {
+                RhinoDoc.ActiveDoc.Objects.AddPoint(p);
+            }
+        }
+        public static void CheckLines(List<Line> lines)
+        {
+            foreach (Line p in lines)
+            {
+                RhinoDoc.ActiveDoc.Objects.AddLine(p);
+            }
         }
     }
 }

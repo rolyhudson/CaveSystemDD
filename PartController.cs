@@ -35,7 +35,7 @@ namespace CaveSystem2020
             for(int i=0;i< grid.Count-1;i++)
             {
                 gridPlane = new Plane(grid[i].To, grid[i].From, grid[i + 1].To);
-
+                //OrientedBox.CheckPlane(gridPlane);
                 Slice();
             }
 

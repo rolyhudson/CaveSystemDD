@@ -14,7 +14,9 @@ namespace CaveSystem2020
         public double zCell;
         public double cellMin = 500;
         public double cellGap = 250;
-        
+        public double FramePlaneMesh = 300;
+        public double FrameBridge = 100;
+
         public List<Brep> roofs = new List<Brep>();
         public List<Brep> walls = new List<Brep>();
         public List<Brep> floors = new List<Brep>();

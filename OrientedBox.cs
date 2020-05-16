@@ -64,14 +64,14 @@ namespace CaveSystem2020
             SideZmaxPlane.ZAxis = ReferencePlane.ZAxis * -1;
 
             SideXminPlane = ReferencePlane;
-            SideXminPlane.Origin = ReferencePlane.Origin + ReferencePlane.XAxis * xDim;
-            SideXminPlane.XAxis = ReferencePlane.ZAxis;
-            SideXminPlane.ZAxis = ReferencePlane.XAxis * -1;
+            SideXminPlane.Origin = ReferencePlane.Origin + ReferencePlane.ZAxis * zDim;
+            SideXminPlane.XAxis = ReferencePlane.ZAxis * -1;
+            SideXminPlane.ZAxis = ReferencePlane.XAxis;
 
             SideXmaxPlane = ReferencePlane;
-            SideXmaxPlane.Origin = ReferencePlane.Origin + ReferencePlane.ZAxis * zDim;
-            SideXmaxPlane.XAxis = ReferencePlane.ZAxis * -1;
-            SideXmaxPlane.ZAxis = ReferencePlane.XAxis;
+            SideXmaxPlane.Origin = ReferencePlane.Origin + ReferencePlane.XAxis * xDim;
+            SideXmaxPlane.XAxis = ReferencePlane.ZAxis;
+            SideXmaxPlane.ZAxis = ReferencePlane.XAxis * -1;
 
             //CheckPlane(SideZminPlane);
             //CheckPlane(SideZmaxPlane);
