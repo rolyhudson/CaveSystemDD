@@ -14,25 +14,27 @@ namespace CaveSystem2020
         double xdim;
         double ydim;
         Parameters parameters;
-        Mesh Panel;
+        public Mesh CavePanels;
         Plane FramePlane;
         int number;
         int familyCount;
+        public bool FailedFrame = false;
 
         List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
         List<List<Point3d>> frameGrid = new List<List<Point3d>>();
-        List<Line> hangers = new List<Line>();
-        List<Line> frame = new List<Line>();
+        public List<Line> internalStub  = new List<Line>();
+        public List<Line> subFrame = new List<Line>();
         public List<Point3d> frameCorners = new List<Point3d>();
-        Mesh GSAmesh;
+        public Mesh GSAmesh;
         public List<List<MeshNode>> meshnodes = new List<List<MeshNode>>();
+        public List<Line> cornerStub = new List<Line>();
         public PanelFrame(Plane local, double x, Parameters param, Mesh p,int num, int groupNum)
         {
             localPlane = local;
             xdim = x;
             ydim = param.yCell;
             parameters = param;
-            Panel = p;
+            CavePanels = p;
             number = num;
             familyCount = groupNum;
             SetLocalPlane();
@@ -81,7 +83,7 @@ namespace CaveSystem2020
                     row.Add(localPlane.Origin + shift);
                 }
                 nodeGrid.Add(row);
-                CaveTools.CheckPoints(row);
+                //CaveTools.CheckPoints(row);
             }
         }
         
@@ -103,7 +105,7 @@ namespace CaveSystem2020
                 for (int d = 0; d < nodeGrid[c].Count; d++)
                 {
                     Ray3d ray = new Ray3d(nodeGrid[c][d], localPlane.ZAxis);
-                    double t = Rhino.Geometry.Intersect.Intersection.MeshRay(Panel, ray);
+                    double t = Rhino.Geometry.Intersect.Intersection.MeshRay(CavePanels, ray);
                     if (t >= 0)
                     {
                         meshnodes[c][d].point = ray.PointAt(t);
@@ -186,38 +188,49 @@ namespace CaveSystem2020
                     double t = 0;
                     Point3d p = new Point3d();
                     Line line = new Line(nodeGrid[c][d], localPlane.ZAxis);
-                    
+
                     if (Rhino.Geometry.Intersect.Intersection.LinePlane(line, FramePlane, out t))
                     {
                         p = line.PointAt(t);
                         points.Add(p);
-                        if(c == 0 || c == nodeGrid.Count - 1)
+                        if (c == 0 || c == nodeGrid.Count - 1)
                         {
-                            if(d == 0 || d == nodeGrid[c].Count - 1)
+                            if (d == 0 || d == nodeGrid[c].Count - 1)
                                 frameCorners.Add(p);
                         }
                     }
+                    else
+                        //missed intersection this is a failed frame
+                        FailedFrame = true;
                 }
                 frameGrid.Add(points);
             }
+            
         }
         private void SetFrameLines()
         {
-            for (int c = 0; c < frameGrid.Count; c++)
+            try
             {
-                for (int d = 0; d < frameGrid[c].Count; d++)
+                for (int c = 0; c < frameGrid.Count; c++)
                 {
-                    if(d < frameGrid[c].Count-1)
+                    for (int d = 0; d < frameGrid[c].Count; d++)
                     {
-                        if(c ==0 || c == frameGrid[c].Count-1)
-                            frame.Add(new Line(frameGrid[c][d], frameGrid[c][d + 1]));
+                        if (d < frameGrid[c].Count - 1)
+                        {
+                            if (c == 0 || c == frameGrid[c].Count - 1)
+                                subFrame.Add(new Line(frameGrid[c][d], frameGrid[c][d + 1]));
+                        }
+
+                        if (c < frameGrid.Count - 1)
+                            subFrame.Add(new Line(frameGrid[c][d], frameGrid[c + 1][d]));
                     }
-                       
-                    if (c < frameGrid.Count - 1)
-                        frame.Add(new Line(frameGrid[c][d], frameGrid[c + 1][d ]));
                 }
             }
-            CaveTools.CheckLines(frame);
+            catch
+            {
+                FailedFrame = true;
+            }
+            CaveTools.CheckLines(subFrame);
         }
         private void SetHangerLines()
         {
@@ -225,13 +238,25 @@ namespace CaveSystem2020
             {
                 for (int d = 0; d < meshnodes[c].Count; d++)
                 {
-
                     if (meshnodes[c][d].pointset)
-                        hangers.Add(new Line(frameGrid[c][d], meshnodes[c][d].point));
+                    {
+                        if (c == 0 || c == nodeGrid.Count - 1)
+                        {
+                            if (d == 0 || d == nodeGrid[c].Count - 1)
+                               cornerStub.Add(new Line(frameGrid[c][d], meshnodes[c][d].point));
+                        }
+                        else
+                        {
+                            internalStub.Add(new Line(frameGrid[c][d], meshnodes[c][d].point));
+                        }
+                        
+
+                    }
+                        
                     
                 }
             }
-            CaveTools.CheckLines(hangers);
+            CaveTools.CheckLines(internalStub );
         }
     }
 }

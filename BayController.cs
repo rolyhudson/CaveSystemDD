@@ -13,7 +13,7 @@ namespace CaveSystem2020
     {
 
         public Mesh slice = new Mesh();
-        List<CaveElement> caveElements = new List<CaveElement>();
+        public List<CaveElement> caveElements = new List<CaveElement>();
         public OrientedBox bayBoundary;
         Parameters parameters;
         List<PanelFrame> panelFrames = new List<PanelFrame>();
@@ -30,12 +30,13 @@ namespace CaveSystem2020
         private void SliceElements()
         {
             CaveElement ceiling = new CaveElement(midSection(), bayBoundary.ReferencePlane, Orientation.Ceiling,parameters);
-            
+            caveElements.Add(ceiling);
             //MeshToPanels(FarSide(), Orientation.SideFar);
             //MeshToPanels(NearSide(), Orientation.SideNear);
             CaveTools.CheckLines(bridges);
             CaveTools.CheckLines(frameConnects);
             CaveTools.CheckLines(envelopeConnect);
+            
         }
         private Mesh midSection()
         {

@@ -11,11 +11,11 @@ namespace CaveSystem2020
     class CaveElement
     {
         Parameters parameters;
-        List<PanelFrame> panelFrames = new List<PanelFrame>();
-        SupportAssembly supportAssembly;
+        public List<PanelFrame> panelFrames = new List<PanelFrame>();
+        public SupportAssembly supportAssembly;
         OrientedBox orientedBox;
         Plane orientationPlane;
-        Orientation orientation;
+        public Orientation orientation;
         Mesh mesh;
         public CaveElement(Mesh imesh, Plane bayPlane,Orientation iorientation, Parameters iparameters)
         {
@@ -65,7 +65,7 @@ namespace CaveSystem2020
                 Plane cut1 = new Plane(p1, orientationPlane.XAxis);
                 Plane cut2 = new Plane(p2, orientationPlane.XAxis * -1);
                 Mesh panel = SelectClosestPanel(CaveTools.splitTwoPlanes(cut1, cut2, mesh), orientationPlane);
-                RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
+                //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
 
                 Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
                 panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, x, unitsX));

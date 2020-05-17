@@ -103,6 +103,9 @@ namespace CaveSystem2020
 
             DA.SetDataTree(0, caveSlices);
             DA.SetDataTree(1, bboxes);
+
+            Documenter documenter3d = new Documenter();
+            documenter3d.WritePart3d(pControl,parameters, @"C:\Users\Admin\Documents\projects\PassageProjects\DD\Output\part.3dm");
         }
         private void getSlices(PartController pcontrol, ref GH_Structure<GH_Brep> boxes, ref GH_Structure<GH_Mesh> slices)
         {
