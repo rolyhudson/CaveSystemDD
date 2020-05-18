@@ -103,7 +103,13 @@ namespace CaveSystem2020
                 AddLines(supportAssembly.connection, "CONNECTION");
                 AddLines(supportAssembly.cornerStub, "HANG CORNER STUB");
             }
-        }
+            if (orientation == Orientation.SideFar || orientation == Orientation.SideFar)
+            {
+                AddLines(supportAssembly.hanger, "WALL CANTILEVER BEAM");
+                AddLines(supportAssembly.connection, "CONNECTION");
+                AddLines(supportAssembly.cornerStub, "WALL CORNER STUB");
+            }
+            }
         private void AddPanelFrames(List<PanelFrame> panelFrames, Orientation orientation)
         {
             foreach(PanelFrame panelFrame in panelFrames)
@@ -117,6 +123,13 @@ namespace CaveSystem2020
                         AddLines(panelFrame.internalStub, "HANG INTERNAL STUB");
                         AddLines(panelFrame.subFrame, "HANG SUBFRAME");
                         AddLines(panelFrame.cornerStub, "HANG CORNER STUB");
+
+                    }
+                    if (orientation == Orientation.SideFar || orientation == Orientation.SideFar)
+                    {
+                        AddLines(panelFrame.internalStub, "WALL INTERNAL STUB");
+                        AddLines(panelFrame.subFrame, "WALL SUBFRAME");
+                        AddLines(panelFrame.cornerStub, "WALL CORNER STUB");
 
                     }
                 }

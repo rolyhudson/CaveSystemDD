@@ -35,31 +35,31 @@ namespace CaveSystem2020
             for(int i=0;i< grid.Count-1;i++)
             {
                 gridPlane = new Plane(grid[i].To, grid[i].From, grid[i + 1].To);
-                //OrientedBox.CheckPlane(gridPlane);
-                Slice();
+                OrientedBox.CheckPlane(gridPlane);
+                SetBay();
             }
 
         }
+        private void SetBay()
+        {
+            bayControllers.Add(new BayController(gridPlane, parameters));
+        }
         private void Slice()
         {
-            Vector3d shiftY = gridPlane.YAxis * parameters.yCell;
-            Point3d basePt = new Point3d(gridPlane.OriginX, gridPlane.OriginY, gridPlane.OriginZ);
-            Point3d origin = basePt + shiftY;
-
-            Plane p1 = new Plane(basePt, gridPlane.YAxis);
-            Plane p2 = new Plane(basePt + gridPlane.YAxis * parameters.yCell, gridPlane.YAxis * -1);
+            Plane p1 = new Plane(gridPlane.Origin, gridPlane.YAxis);
+            Plane p2 = new Plane(gridPlane.Origin + gridPlane.YAxis * parameters.yCell, gridPlane.YAxis * -1);
 
             //try and slice the mesh
             Mesh slice = CaveTools.splitTwoPlanes(p1, p2, meshToVoxelise);
             bool normals = slice.FaceNormals.ComputeFaceNormals();
-            Plane boxPln = new Plane(basePt, gridPlane.XAxis, gridPlane.YAxis);
+            Plane boxPln = new Plane(gridPlane.Origin, gridPlane.XAxis, gridPlane.YAxis);
             if (slice != null && slice.Faces.Count > 0)
             {
-                Brep minVol = CaveTools.findBBoxGivenPlane(boxPln, slice);
-                OrientedBox oBox = CaveTools.FindOrientedBox(boxPln, slice);
-                brepBBoxes.Add(oBox.BoundingBox);
-                caveSlices.Add(slice);
-                bayControllers.Add(new BayController(slice,oBox,parameters));
+                //Brep minVol = CaveTools.findBBoxGivenPlane(boxPln, slice);
+                //OrientedBox oBox = CaveTools.FindOrientedBox(boxPln, slice);
+                //brepBBoxes.Add(oBox.BoundingBox);
+                //caveSlices.Add(slice);
+                //bayControllers.Add(new BayController(gridPlane, parameters));
             }
         }
         

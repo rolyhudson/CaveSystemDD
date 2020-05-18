@@ -34,6 +34,8 @@ namespace CaveSystem2020
         {
 
             Point3d envelope = CaveTools.ClosestProjected(breps, p1, orientationPlane.Normal * -1);
+            if (envelope.Z == 0)
+                return;
             hanger.Add(new Line(p1, envelope));
         }
         private void SetHangerAssembly(Point3d p1, Point3d p2)

@@ -28,7 +28,7 @@ namespace CaveSystem2020
         public Mesh GSAmesh;
         public List<List<MeshNode>> meshnodes = new List<List<MeshNode>>();
         public List<Line> cornerStub = new List<Line>();
-        public PanelFrame(Plane local, double x, Parameters param, Mesh p,int num, int groupNum)
+        public PanelFrame(Plane local, double x, Parameters param, Mesh p, int num, int groupNum)
         {
             localPlane = local;
             xdim = x;
@@ -45,6 +45,17 @@ namespace CaveSystem2020
             SetFrameGrid();
             SetFrameLines();
             SetHangerLines();
+            CheckGeometry();
+        }
+        private void CheckGeometry()
+        {
+            if (!FailedFrame)
+            {
+                CaveTools.CheckLines(subFrame);
+                CaveTools.CheckLines(internalStub);
+                CaveTools.CheckLines(cornerStub);
+            }
+            RhinoDoc.ActiveDoc.Objects.AddMesh(GSAmesh);
         }
         private void SetLocalPlane()
         {
@@ -130,7 +141,7 @@ namespace CaveSystem2020
                     }
                 }
             }
-            RhinoDoc.ActiveDoc.Objects.AddMesh(GSAmesh);
+            
         }
         private Mesh meshFrom4Nodes(List<MeshNode> nodes)
         {
@@ -180,6 +191,8 @@ namespace CaveSystem2020
         }
         private void SetFrameGrid()
         {
+            frameGrid = new List<List<Point3d>>();
+            frameCorners = new List<Point3d>();
             for (int c = 0; c < nodeGrid.Count; c++)
             {
                 List<Point3d> points = new List<Point3d>();
@@ -205,7 +218,36 @@ namespace CaveSystem2020
                 }
                 frameGrid.Add(points);
             }
-            
+            CheckPlane();
+        }
+        private void CheckPlane()
+        {
+            double totalDist = 0;
+            int count = 0;
+            for (int c = 0; c < meshnodes.Count; c++)
+            {
+                for (int d = 0; d < meshnodes[c].Count; d++)
+                {
+                    if (meshnodes[c][d].pointset)
+                    {
+                        totalDist += meshnodes[c][d].point.DistanceTo(frameGrid[c][d]);
+                        count++;
+                    }
+                }
+            }
+            //if we already have a frame plane matching local
+            if (Vector3d.VectorAngle(localPlane.ZAxis,FramePlane.ZAxis)< 0.0174533) return;
+
+            if(totalDist/count> parameters.xCell/2)
+                FailedFrame = true;
+
+            if(FailedFrame)
+            {
+                HorizontalPlane();
+                SetFrameGrid();
+            }
+                
+
         }
         private void SetFrameLines()
         {
@@ -230,7 +272,24 @@ namespace CaveSystem2020
             {
                 FailedFrame = true;
             }
-            CaveTools.CheckLines(subFrame);
+            
+        }
+        private void HorizontalPlane()
+        {
+            double minDist = double.MaxValue;
+            Point3d closest = new Point3d();
+            foreach(Point3d v in CavePanels.Vertices)
+            {
+                if(v.DistanceTo(localPlane.ClosestPoint(v))<minDist)
+                {
+                    minDist = v.DistanceTo(localPlane.ClosestPoint(v));
+                    closest = v;
+                }
+            }
+
+            FramePlane = localPlane;
+            FramePlane.Origin = closest + localPlane.ZAxis * - parameters.FramePlaneMesh;
+            FailedFrame = false;
         }
         private void SetHangerLines()
         {
@@ -249,14 +308,9 @@ namespace CaveSystem2020
                         {
                             internalStub.Add(new Line(frameGrid[c][d], meshnodes[c][d].point));
                         }
-                        
-
-                    }
-                        
-                    
+                    } 
                 }
             }
-            CaveTools.CheckLines(internalStub );
         }
     }
 }

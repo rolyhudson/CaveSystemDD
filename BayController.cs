@@ -15,28 +15,46 @@ namespace CaveSystem2020
         public Mesh slice = new Mesh();
         public List<CaveElement> caveElements = new List<CaveElement>();
         public OrientedBox bayBoundary;
+        public Plane ReferencePlane;
         Parameters parameters;
-        List<PanelFrame> panelFrames = new List<PanelFrame>();
-        List<Line> envelopeConnect = new List<Line>();
-        List<Line> bridges = new List<Line>();
-        List<Line> frameConnects = new List<Line>();
-        public BayController(Mesh mesh, OrientedBox obox, Parameters iparameters)
+
+        public BayController(Plane iplane, Parameters iparameters)
         {
-            slice = mesh;
-            bayBoundary = obox;
+            //slice = mesh;
+            //bayBoundary = obox;
+            ReferencePlane = iplane;
             parameters = iparameters;
             SliceElements();
         }
         private void SliceElements()
         {
-            CaveElement ceiling = new CaveElement(midSection(), bayBoundary.ReferencePlane, Orientation.Ceiling,parameters);
+            CaveElement ceiling = new CaveElement(SelectMesh("CeilingMesh"), ReferencePlane, Orientation.Ceiling, parameters);
             caveElements.Add(ceiling);
-            //MeshToPanels(FarSide(), Orientation.SideFar);
+            //CaveElement farside = new CaveElement(SelectMesh("SideMesh"),ReferencePlane, Orientation.SideFar, parameters);
+            //caveElements.Add(farside);
+            //CaveElement nearside = new CaveElement(NearSide(), bayBoundary.ReferencePlane, Orientation.SideNear, parameters);
+            //caveElements.Add(nearside);
             //MeshToPanels(NearSide(), Orientation.SideNear);
-            CaveTools.CheckLines(bridges);
-            CaveTools.CheckLines(frameConnects);
-            CaveTools.CheckLines(envelopeConnect);
-            
+
+        }
+        private Mesh SelectMesh(string layerName)
+        {
+            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer(layerName );
+            if (objs == null)
+                return null;
+            Plane bayXZ = new Plane(ReferencePlane.Origin, ReferencePlane.YAxis);
+
+            foreach(RhinoObject obj in objs)
+            {
+                if(obj.ObjectType == ObjectType.Mesh)
+                {
+                    Point3d centroid = CaveTools.averagePoint(obj.Geometry as Mesh);
+                    double dist = centroid.DistanceTo(bayXZ.ClosestPoint(centroid));
+                    if (dist <= parameters.yCell && CaveTools.pointInsidePlane(centroid,bayXZ))
+                        return obj.Geometry as Mesh;
+                }
+            }
+            return null;
         }
         private Mesh midSection()
         {
