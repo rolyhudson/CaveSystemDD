@@ -30,8 +30,8 @@ namespace CaveSystem2020
         {
             CaveElement ceiling = new CaveElement(SelectMesh("CeilingMesh"), ReferencePlane, Orientation.Ceiling, parameters);
             caveElements.Add(ceiling);
-            //CaveElement farside = new CaveElement(SelectMesh("SideMesh"),ReferencePlane, Orientation.SideFar, parameters);
-            //caveElements.Add(farside);
+            CaveElement farside = new CaveElement(SelectMesh("SideMesh"), ReferencePlane, Orientation.SideFar, parameters);
+            caveElements.Add(farside);
             //CaveElement nearside = new CaveElement(NearSide(), bayBoundary.ReferencePlane, Orientation.SideNear, parameters);
             //caveElements.Add(nearside);
             //MeshToPanels(NearSide(), Orientation.SideNear);

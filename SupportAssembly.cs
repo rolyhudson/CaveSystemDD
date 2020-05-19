@@ -40,9 +40,27 @@ namespace CaveSystem2020
         }
         private void SetHangerAssembly(Point3d p1, Point3d p2)
         {
-            double bridgeZ = Math.Max(p1.Z, p2.Z) + parameters.FrameBridge;
-            Point3d b1 = new Point3d(p1.X, p1.Y, bridgeZ);
-            Point3d b2 = new Point3d(p2.X, p2.Y, bridgeZ);
+            //offset a test plane
+            Plane testPlane = new Plane(orientationPlane.Origin + orientationPlane.Normal * -100000, orientationPlane.Normal);
+            Point3d plnPt2 = testPlane.ClosestPoint(p2);
+            Point3d plnPt1 = testPlane.ClosestPoint(p1);
+
+            Point3d b1 = new Point3d();
+            Point3d b2 = new Point3d();
+            Vector3d back = new Vector3d();
+            if (p1.DistanceTo(plnPt1) < p2.DistanceTo(testPlane.ClosestPoint(plnPt2)))
+            {
+                b1 = p1 + orientationPlane.Normal * -parameters.FrameBridge;
+                back = b1 - plnPt1;
+                b2 = plnPt2 + back;
+            }
+            else
+            {
+                b2 = p2 + orientationPlane.Normal * -parameters.FrameBridge;
+                back = b2 - plnPt2;
+                b1 = plnPt1 + back;
+            }
+
             Line bridge = new Line(b1, b2);
             connection.Add(bridge);
             cornerStub.Add(new Line(b1, p1));

@@ -167,9 +167,12 @@ namespace CaveSystem2020
         }
         private void SetFramePlane()
         {
-            List<Point3d> points = meshnodes.SelectMany(d => d.Select(m => m.point)).ToList();
+            //List<Point3d> points = meshnodes.SelectMany(d => d.Select(m => m.point)).ToList();
+            List<Point3d> points = new List<Point3d>();
+            foreach (Point3d p in CavePanels.Vertices)
+                points.Add(p);
             Plane.FitPlaneToPoints(points, out FramePlane);
-            if (FramePlane.Normal.Z < 0)
+            if (Vector3d.VectorAngle(FramePlane.Normal,localPlane.Normal) < Math.PI/2)
                 FramePlane.Flip();
             //find closest point above plane
             double maxDist = double.MinValue;
