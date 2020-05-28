@@ -16,18 +16,23 @@ namespace CaveSystem2020
         OrientedBox orientedBox;
         Plane orientationPlane;
         public Orientation orientation;
+        Plane BayXY = new Plane();
         Mesh mesh;
         public CaveElement(Mesh imesh, Plane bayPlane,Orientation iorientation, Parameters iparameters)
         {
             parameters = iparameters;
             orientation = iorientation;
+            supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
             mesh = imesh;
+            BayXY = bayPlane;
+            if (mesh == null)
+                return;
             //orientedBox = CaveTools.FindOrientedBox(bayBoundary.ReferencePlane, mesh);
             orientedBox = CaveTools.FindOrientedBox(bayPlane, imesh);
             orientationPlane = orientedBox.PlaneSelection(orientation);
-            supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
+            
             MeshToPanels();
-            supportAssembly.ConnectToEnvelope(panelFrames);
+            //supportAssembly.ConnectToEnvelope(panelFrames);
         }
         private void MeshToPanels()
         {
@@ -64,11 +69,13 @@ namespace CaveSystem2020
 
                 Plane cut1 = new Plane(p1, orientationPlane.XAxis);
                 Plane cut2 = new Plane(p2, orientationPlane.XAxis * -1);
+
                 Mesh panel = SelectClosestPanel(CaveTools.splitTwoPlanes(cut1, cut2, mesh), orientationPlane);
                 //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
-
+                OrientedBox panelBox = CaveTools.FindOrientedBox(BayXY,panel);
                 Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
-                panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, x, unitsX));
+                
+                panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, x, unitsX,orientedBox.yDim));
             }
             
         }

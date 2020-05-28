@@ -30,10 +30,10 @@ namespace CaveSystem2020
         {
             CaveElement ceiling = new CaveElement(SelectMesh("CeilingMesh"), ReferencePlane, Orientation.Ceiling, parameters);
             caveElements.Add(ceiling);
-            CaveElement farside = new CaveElement(SelectMesh("SideMesh"), ReferencePlane, Orientation.SideFar, parameters);
-            caveElements.Add(farside);
-            //CaveElement nearside = new CaveElement(NearSide(), bayBoundary.ReferencePlane, Orientation.SideNear, parameters);
+            //CaveElement nearside = new CaveElement(SelectMesh("NearSideMesh"), ReferencePlane, Orientation.SideNear, parameters);
             //caveElements.Add(nearside);
+            //CaveElement farside = new CaveElement(SelectMesh("FarSideMesh"), ReferencePlane, Orientation.SideFar, parameters);
+            //caveElements.Add(farside);
             //MeshToPanels(NearSide(), Orientation.SideNear);
 
         }
@@ -50,7 +50,7 @@ namespace CaveSystem2020
                 {
                     Point3d centroid = CaveTools.averagePoint(obj.Geometry as Mesh);
                     double dist = centroid.DistanceTo(bayXZ.ClosestPoint(centroid));
-                    if (dist <= parameters.yCell && CaveTools.pointInsidePlane(centroid,bayXZ))
+                    if (dist <= 3000 && CaveTools.pointInsidePlane(centroid,bayXZ))
                         return obj.Geometry as Mesh;
                 }
             }

@@ -58,7 +58,9 @@
   <ItemGroup>
     <Compile Include="BayController.cs" />
     <Compile Include="CaveElement.cs" />
+    <Compile Include="CrankFinder.cs" />
     <Compile Include="Documenter.cs" />
+    <Compile Include="FrameMember.cs" />
     <Compile Include="MeshNode.cs" />
     <Compile Include="Orientation.cs" />
     <Compile Include="OrientedBox.cs" />

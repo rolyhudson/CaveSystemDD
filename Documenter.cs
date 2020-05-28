@@ -34,6 +34,8 @@ namespace CaveSystem2020
             "ROOF BEAM",
             "CONNECTION",
             "CAVE PANELS",
+            "SUB FRAME FAILURES",
+            "SUB FRAME FAILURES GSA MESH"
         };
         List<Color> layerColors = new List<Color>()
         {
@@ -51,7 +53,9 @@ namespace CaveSystem2020
             Color.Fuchsia,
             Color.Black,
             Color.FromArgb( 0,127,0),
-            Color.HotPink
+            Color.HotPink,
+            Color.Red,
+            Color.Red
         };
         public Documenter()
         {
@@ -103,7 +107,7 @@ namespace CaveSystem2020
                 AddLines(supportAssembly.connection, "CONNECTION");
                 AddLines(supportAssembly.cornerStub, "HANG CORNER STUB");
             }
-            if (orientation == Orientation.SideFar || orientation == Orientation.SideFar)
+            if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
             {
                 AddLines(supportAssembly.hanger, "WALL CANTILEVER BEAM");
                 AddLines(supportAssembly.connection, "CONNECTION");
@@ -114,25 +118,46 @@ namespace CaveSystem2020
         {
             foreach(PanelFrame panelFrame in panelFrames)
             {
-                if (!panelFrame.FailedFrame)
-                {
-                    AddMesh(panelFrame.GSAmesh, "GSA MESH");
+                
+                    
                     AddMesh(panelFrame.CavePanels, "CAVE PANELS");
                     if(orientation == Orientation.Ceiling)
                     {
-                        AddLines(panelFrame.internalStub, "HANG INTERNAL STUB");
-                        AddLines(panelFrame.subFrame, "HANG SUBFRAME");
-                        AddLines(panelFrame.cornerStub, "HANG CORNER STUB");
+                        if (panelFrame.FailedFrame == true)
+                        {
+                            AddLines(panelFrame.internalStub, "SUB FRAME FAILURES");
+                            AddLines(panelFrame.subFrame, "SUB FRAME FAILURES");
+                            AddLines(panelFrame.cornerStub, "SUB FRAME FAILURES");
+                            AddMesh(panelFrame.GSAmesh, "SUB FRAME FAILURES GSA MESH");
+                        }
+                        else
+                        {
+                            AddMesh(panelFrame.GSAmesh, "GSA MESH");
+                            AddLines(panelFrame.internalStub, "HANG INTERNAL STUB");
+                            AddLines(panelFrame.subFrame, "HANG SUBFRAME");
+                            AddLines(panelFrame.cornerStub, "HANG CORNER STUB");
+                        }
+                        
 
                     }
-                    if (orientation == Orientation.SideFar || orientation == Orientation.SideFar)
+                    if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
                     {
-                        AddLines(panelFrame.internalStub, "WALL INTERNAL STUB");
-                        AddLines(panelFrame.subFrame, "WALL SUBFRAME");
-                        AddLines(panelFrame.cornerStub, "WALL CORNER STUB");
+                        if (panelFrame.FailedFrame == true)
+                        {
+                            AddLines(panelFrame.internalStub, "SUB FRAME FAILURES");
+                            AddLines(panelFrame.subFrame, "SUB FRAME FAILURES");
+                            AddLines(panelFrame.cornerStub, "SUB FRAME FAILURES");
+                        }
+                        else
+                        {
+                            AddLines(panelFrame.internalStub, "WALL INTERNAL STUB");
+                            AddLines(panelFrame.subFrame, "WALL SUBFRAME");
+                            AddLines(panelFrame.cornerStub, "WALL CORNER STUB");
+                        }
+                        
 
                     }
-                }
+                
                
             }
         }
