@@ -13,18 +13,15 @@ namespace CaveSystem2020
         Mesh meshToVoxelise;
         public List<BayController> bayControllers = new List<BayController>();
         public List<Line> grid = new List<Line>();
-        public List<Mesh> caveSlices = new List<Mesh>();
+        
         public List<Brep> brepBBoxes = new List<Brep>();
         public Parameters parameters;
         //public Text3d sectionNum;
         Plane gridPlane;
 
-        public PartController(Mesh mesh, List<Line> gridLines, Parameters prms)
+        public PartController( List<Line> gridLines, Parameters prms)
         {
             parameters = prms;
-            meshToVoxelise = mesh;
-            meshToVoxelise.Normals.ComputeNormals();
-            meshToVoxelise.FaceNormals.ComputeFaceNormals();
             grid = gridLines;
 
             //setText(parameters.partNumber);
@@ -44,6 +41,7 @@ namespace CaveSystem2020
         {
             bayControllers.Add(new BayController(gridPlane, parameters));
         }
+
         private void Slice()
         {
             Plane p1 = new Plane(gridPlane.Origin, gridPlane.YAxis);

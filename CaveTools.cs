@@ -53,6 +53,21 @@ namespace CaveSystem2020
             pts.Add(m.Vertices[f.D]);
             return pts;
         }
+        private static List<Point3d> getVertexPoints( Mesh m)
+        {
+            List<Point3d> pts = new List<Point3d>();
+            foreach(var v in m.Vertices)
+                pts.Add(v);
+            return pts;
+        }
+        public static bool MeshInsidePlanes(Plane pln1, Plane pln2, Mesh m)
+        {
+            List<Point3d> pts = getVertexPoints(m);
+            if (pointsInsidePlane(pts, pln1) && pointsInsidePlane(pts, pln2))
+                return true;
+            else
+                return false;
+        }
         private static bool pointsInsidePlane(List<Point3d> pts, Plane pln)
         {
             foreach (Point3d p in pts)

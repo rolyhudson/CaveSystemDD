@@ -34,7 +34,7 @@ namespace CaveSystem2020
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddMeshParameter("Meshes", "M", "", GH_ParamAccess.item);
+            
             pManager.AddNumberParameter("xCell", "x", "", GH_ParamAccess.item, 2000);
             pManager.AddNumberParameter("yCell", "y", "", GH_ParamAccess.item, 3000);
             pManager.AddNumberParameter("zCell", "z", "", GH_ParamAccess.item, 1000);
@@ -75,7 +75,7 @@ namespace CaveSystem2020
         /// to store data in output parameters.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            Mesh mesh = new Mesh();
+            
             List<Line> bldGrid = new List<Line>();
             double xcell = 0;
             double ycell = 0;
@@ -84,17 +84,18 @@ namespace CaveSystem2020
         List<Brep> walls = new List<Brep>();
         List<Brep> floors = new List<Brep>();
 
-            if (!DA.GetData(0, ref mesh)) return;
-            if (!DA.GetData(1, ref xcell)) return;
-            if (!DA.GetData(2, ref ycell)) return;
-            if (!DA.GetData(3, ref zcell)) return;
-            if (!DA.GetDataList(4, bldGrid)) return;
-            if (!DA.GetDataList(5, roofs)) return;
-            if (!DA.GetDataList(6, walls)) return;
-            if (!DA.GetDataList(7, floors)) return;
+            
+
+            if (!DA.GetData(0, ref xcell)) return;
+            if (!DA.GetData(1, ref ycell)) return;
+            if (!DA.GetData(2, ref zcell)) return;
+            if (!DA.GetDataList(3, bldGrid)) return;
+            if (!DA.GetDataList(4, roofs)) return;
+            if (!DA.GetDataList(5, walls)) return;
+            if (!DA.GetDataList(6, floors)) return;
 
             Parameters parameters = new Parameters(xcell, ycell, zcell,roofs,walls, floors);
-            PartController pControl = new PartController(mesh, bldGrid, parameters);
+            PartController pControl = new PartController( bldGrid, parameters);
 
             GH_Structure<GH_Mesh> caveSlices = new GH_Structure<GH_Mesh>();
             GH_Structure<GH_Brep> bboxes = new GH_Structure<GH_Brep>();
@@ -111,7 +112,7 @@ namespace CaveSystem2020
         {
             
             foreach (Brep b in pcontrol.brepBBoxes) boxes.Append(new GH_Brep(b));
-            foreach (Mesh m in pcontrol.caveSlices) slices.Append(new GH_Mesh(m));
+            
             
         }
         /// <summary>

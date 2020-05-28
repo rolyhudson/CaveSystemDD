@@ -28,33 +28,58 @@ namespace CaveSystem2020
         }
         private void SliceElements()
         {
-            CaveElement ceiling = new CaveElement(SelectMesh("CeilingMesh"), ReferencePlane, Orientation.Ceiling, parameters);
-            caveElements.Add(ceiling);
-            //CaveElement nearside = new CaveElement(SelectMesh("NearSideMesh"), ReferencePlane, Orientation.SideNear, parameters);
-            //caveElements.Add(nearside);
-            //CaveElement farside = new CaveElement(SelectMesh("FarSideMesh"), ReferencePlane, Orientation.SideFar, parameters);
-            //caveElements.Add(farside);
-            //MeshToPanels(NearSide(), Orientation.SideNear);
-
+            List<string> meshLayers = new List<string>()
+            {
+                "CeilingMesh",
+                "NearSideMesh",
+                "FarSideMesh"
+            };
+            Orientation orientation = Orientation.Ceiling;
+            foreach(string layer in meshLayers)
+            {
+                List<Mesh> meshes = SelectMeshes(layer);
+                switch (layer)
+                {
+                    case "CeilingMesh":
+                        orientation = Orientation.Ceiling;
+                        break;
+                    case "NearSideMesh":
+                        orientation = Orientation.SideNear;
+                        break;
+                    case "FarSideMesh":
+                        orientation = Orientation.SideFar;
+                        break;
+                    default:
+                        orientation = Orientation.Ceiling;
+                        break;
+                }
+                foreach (Mesh m in meshes)
+                {
+                    Brep minVol = CaveTools.findBBoxGivenPlane(ReferencePlane, m);
+                    RhinoDoc.ActiveDoc.Objects.AddBrep(minVol);
+                    //CaveElement element = new CaveElement(m, ReferencePlane, orientation, parameters);
+                    //caveElements.Add(element);
+                }
+            }
         }
-        private Mesh SelectMesh(string layerName)
+        private List<Mesh> SelectMeshes(string layerName)
         {
             RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer(layerName );
             if (objs == null)
                 return null;
-            Plane bayXZ = new Plane(ReferencePlane.Origin, ReferencePlane.YAxis);
-
-            foreach(RhinoObject obj in objs)
+            Plane pln1 = new Plane(ReferencePlane.Origin - ReferencePlane.YAxis * 10, ReferencePlane.YAxis);
+            Plane pln2 = new Plane(ReferencePlane.Origin + ReferencePlane.YAxis * (parameters.yCell+10), ReferencePlane.YAxis * -1);
+            List<Mesh> contained = new List<Mesh>();
+            foreach (RhinoObject obj in objs)
             {
                 if(obj.ObjectType == ObjectType.Mesh)
                 {
-                    Point3d centroid = CaveTools.averagePoint(obj.Geometry as Mesh);
-                    double dist = centroid.DistanceTo(bayXZ.ClosestPoint(centroid));
-                    if (dist <= 3000 && CaveTools.pointInsidePlane(centroid,bayXZ))
-                        return obj.Geometry as Mesh;
+                    Mesh m = obj.Geometry as Mesh;
+                    if (CaveTools.MeshInsidePlanes(pln1, pln2, m))
+                        contained.Add(m);
                 }
             }
-            return null;
+            return contained;
         }
         private Mesh midSection()
         {

@@ -71,6 +71,7 @@
     <Compile Include="Parameters.cs" />
     <Compile Include="PartController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="StubMember.cs" />
     <Compile Include="SupportAssembly.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

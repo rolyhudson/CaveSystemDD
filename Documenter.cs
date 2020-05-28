@@ -34,8 +34,9 @@ namespace CaveSystem2020
             "ROOF BEAM",
             "CONNECTION",
             "CAVE PANELS",
-            "SUB FRAME FAILURES",
-            "SUB FRAME FAILURES GSA MESH"
+            "SUB FRAME ANGLE COMPLIANCE FAIL",
+            "SUB FRAME STUB LENGTH COMPLIANCE FAIL",
+            "CHECK SUB FRAME DISTANCE FROM MESH"
         };
         List<Color> layerColors = new List<Color>()
         {
@@ -55,7 +56,8 @@ namespace CaveSystem2020
             Color.FromArgb( 0,127,0),
             Color.HotPink,
             Color.Red,
-            Color.Red
+            Color.Red,
+            Color.BlueViolet
         };
         public Documenter()
         {
@@ -118,47 +120,23 @@ namespace CaveSystem2020
         {
             foreach(PanelFrame panelFrame in panelFrames)
             {
-                
-                    
-                    AddMesh(panelFrame.CavePanels, "CAVE PANELS");
-                    if(orientation == Orientation.Ceiling)
-                    {
-                        if (panelFrame.FailedFrame == true)
-                        {
-                            AddLines(panelFrame.internalStub, "SUB FRAME FAILURES");
-                            AddLines(panelFrame.subFrame, "SUB FRAME FAILURES");
-                            AddLines(panelFrame.cornerStub, "SUB FRAME FAILURES");
-                            AddMesh(panelFrame.GSAmesh, "SUB FRAME FAILURES GSA MESH");
-                        }
-                        else
-                        {
-                            AddMesh(panelFrame.GSAmesh, "GSA MESH");
-                            AddLines(panelFrame.internalStub, "HANG INTERNAL STUB");
-                            AddLines(panelFrame.subFrame, "HANG SUBFRAME");
-                            AddLines(panelFrame.cornerStub, "HANG CORNER STUB");
-                        }
-                        
-
-                    }
-                    if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
-                    {
-                        if (panelFrame.FailedFrame == true)
-                        {
-                            AddLines(panelFrame.internalStub, "SUB FRAME FAILURES");
-                            AddLines(panelFrame.subFrame, "SUB FRAME FAILURES");
-                            AddLines(panelFrame.cornerStub, "SUB FRAME FAILURES");
-                        }
-                        else
-                        {
-                            AddLines(panelFrame.internalStub, "WALL INTERNAL STUB");
-                            AddLines(panelFrame.subFrame, "WALL SUBFRAME");
-                            AddLines(panelFrame.cornerStub, "WALL CORNER STUB");
-                        }
-                        
-
-                    }
-                
-               
+                AddMesh(panelFrame.CavePanels, "CAVE PANELS");
+                AddMesh(panelFrame.GSAmesh, "GSA MESH");
+                string subframeLayer = "HANG SUBFRAME";
+                string cornerStubLayer = "HANG CORNER STUB";
+                string internalStubLayer = "HANG INTERNAL STUB";
+                if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
+                {
+                    subframeLayer = "WALL SUBFRAME";
+                    cornerStubLayer = "WALL CORNER STUB";
+                    internalStubLayer = "WALL INTERNAL STUB";
+                }
+                foreach (FrameMember frameMember in panelFrame.subFrame)
+                    AddFrameLine(frameMember, subframeLayer);
+                foreach (StubMember stubMember in panelFrame.internalStub)
+                    AddStubLine(stubMember, internalStubLayer);
+                foreach (StubMember stubMember in panelFrame.cornerStub)
+                    AddStubLine(stubMember, cornerStubLayer);
             }
         }
         private void AddMesh(Mesh mesh, string layer)
@@ -175,6 +153,26 @@ namespace CaveSystem2020
                 file.Objects.AddLine(l, layerAttributes[layer]);
             }
             
+        }
+        private void AddFrameLine(FrameMember frameMember,string layer)
+        {
+            if (frameMember.AngleCompliance)
+                file.Objects.AddLine(frameMember.frameLine, layerAttributes[layer]);
+            else
+            {
+                file.Objects.AddLine(frameMember.frameLine, layerAttributes["SUB FRAME ANGLE COMPLIANCE FAIL"]);
+            }
+            file.Objects.AddLine(frameMember.shiftLine, layerAttributes["CHECK SUB FRAME DISTANCE FROM MESH"]);
+        }
+        private void AddStubLine(StubMember stubMember, string layer)
+        {
+            if (stubMember.LengthCompliance)
+                file.Objects.AddLine(stubMember.Stub, layerAttributes[layer]);
+            else
+            {
+                file.Objects.AddLine(stubMember.Stub, layerAttributes["SUB FRAME STUB LENGTH COMPLIANCE FAIL"]);
+            }
+
         }
         private void LookUpAttributes(string prop, Orientation orientation)
         {
