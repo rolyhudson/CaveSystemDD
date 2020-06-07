@@ -197,7 +197,8 @@ namespace CaveSystem2020
         public static Point3d ClosestProjected(List<Brep> breps, Point3d testPoint,Vector3d direction)
         {
             var points = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(breps, new List<Point3d>() { testPoint }, direction, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-
+            if (points == null)
+                return new Point3d();
             double distMin = double.MaxValue;
             Point3d closest = new Point3d();
             foreach(var p in points)
@@ -207,6 +208,24 @@ namespace CaveSystem2020
                 {
                     distMin = p.DistanceTo(testPoint);
                     closest = p;
+                }
+            }
+            return closest;
+        }
+        public static Point3d ClosestPoint(List<Curve> curves, Point3d testPoint)
+        {
+
+            double distMin = double.MaxValue;
+            Point3d closest = new Point3d();
+            double t = 0;
+            foreach (var c in curves)
+            {
+                c.ClosestPoint(testPoint, out t);
+                Point3d temp = c.PointAt(t);
+                if (temp.DistanceTo(testPoint) < distMin)
+                {
+                    distMin = temp.DistanceTo(testPoint);
+                    closest = temp;
                 }
             }
             return closest;

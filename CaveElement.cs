@@ -22,7 +22,7 @@ namespace CaveSystem2020
         {
             parameters = iparameters;
             orientation = iorientation;
-            supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
+            
             mesh = imesh;
             BayXY = bayPlane;
             if (mesh == null)
@@ -30,9 +30,10 @@ namespace CaveSystem2020
             //orientedBox = CaveTools.FindOrientedBox(bayBoundary.ReferencePlane, mesh);
             orientedBox = CaveTools.FindOrientedBox(bayPlane, imesh);
             orientationPlane = orientedBox.PlaneSelection(orientation);
-            
+            supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
+
             MeshToPanels();
-            //supportAssembly.ConnectToEnvelope(panelFrames);
+            supportAssembly.ConnectToEnvelope(panelFrames);
         }
         private void MeshToPanels()
         {
@@ -55,7 +56,7 @@ namespace CaveSystem2020
                 unitsX -= 1;
                 dimXSpecial = boxDim - (unitsX - 1) * cellSize;
             }
-
+            int panelNum = 0;
             for (int x = 0; x < unitsX; x++)
             {
                 double xPanel = cellSize;
@@ -74,12 +75,38 @@ namespace CaveSystem2020
                 //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
                 OrientedBox panelBox = CaveTools.FindOrientedBox(BayXY,panel);
                 Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
-                
-                panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, x, unitsX,orientedBox.yDim));
+                //area check
+                panel = FindPanelByArea(cut1,ref cut2, xPanel);
+
+                panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, panelNum, unitsX,orientedBox.yDim));
+                panelNum++;
             }
             
         }
-        
+        private Mesh FindPanelByArea(Plane start,ref Plane end,double xdim)
+        {
+            Mesh panel = SelectClosestPanel(CaveTools.splitTwoPlanes(start, end, mesh), orientationPlane);
+            AreaMassProperties amp = AreaMassProperties.Compute(panel);
+            if (amp.Area < 9e6)
+                return panel;
+            int attempt = 10;
+            double dist = xdim /2;
+            
+            while (attempt > 0)
+            {
+                //adjust plane
+                if (amp.Area > 9e6)
+                    end.Origin = end.Origin + end.Normal * dist;
+                else
+                    end.Origin = end.Origin - end.Normal * dist;
+                panel = SelectClosestPanel(CaveTools.splitTwoPlanes(start, end, mesh), orientationPlane);
+                amp = AreaMassProperties.Compute(panel);
+                attempt--;
+                dist = dist / 2;
+            }
+
+            return panel;
+        }
         private Mesh SelectClosestPanel(Mesh m, Plane plane)
         {
             if (m.DisjointMeshCount > 1)

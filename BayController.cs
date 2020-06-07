@@ -31,8 +31,8 @@ namespace CaveSystem2020
             List<string> meshLayers = new List<string>()
             {
                 "CeilingMesh",
-                "NearSideMesh",
-                "FarSideMesh"
+                "WALL-N",
+                "WALL-S"
             };
             Orientation orientation = Orientation.Ceiling;
             foreach(string layer in meshLayers)
@@ -43,10 +43,10 @@ namespace CaveSystem2020
                     case "CeilingMesh":
                         orientation = Orientation.Ceiling;
                         break;
-                    case "NearSideMesh":
+                    case "WALL-N":
                         orientation = Orientation.SideNear;
                         break;
-                    case "FarSideMesh":
+                    case "WALL-S":
                         orientation = Orientation.SideFar;
                         break;
                     default:
@@ -56,9 +56,9 @@ namespace CaveSystem2020
                 foreach (Mesh m in meshes)
                 {
                     Brep minVol = CaveTools.findBBoxGivenPlane(ReferencePlane, m);
-                    RhinoDoc.ActiveDoc.Objects.AddBrep(minVol);
-                    //CaveElement element = new CaveElement(m, ReferencePlane, orientation, parameters);
-                    //caveElements.Add(element);
+                    //RhinoDoc.ActiveDoc.Objects.AddBrep(minVol);
+                    CaveElement element = new CaveElement(m, ReferencePlane, orientation, parameters);
+                    caveElements.Add(element);
                 }
             }
         }

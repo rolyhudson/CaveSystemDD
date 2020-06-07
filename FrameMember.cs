@@ -53,8 +53,8 @@ namespace CaveSystem2020
             //RhinoDoc.ActiveDoc.Objects.AddCurve(panelCurve);
             //RhinoDoc.ActiveDoc.Objects.AddLine(panelLine);
             //RhinoDoc.ActiveDoc.Objects.AddLine(frameLine);
-            RhinoDoc.ActiveDoc.Objects.AddLine(shiftLine);
-            RhinoDoc.ActiveDoc.Objects.AddPoint(closestPoint);
+            //RhinoDoc.ActiveDoc.Objects.AddLine(shiftLine);
+            //RhinoDoc.ActiveDoc.Objects.AddPoint(closestPoint);
         }
         private void CheckAngle()
         {

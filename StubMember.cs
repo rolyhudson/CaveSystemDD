@@ -15,6 +15,7 @@ namespace CaveSystem2020
         List<Line> frameMembers = new List<Line>();
         List<Point3d> axisNodes = new List<Point3d>();
         public Point3d stubEnd;
+        public Point3d frameGridNode;
         Point3d firstNode;
         Vector3d toPanel;
         public Line Stub = new Line();
@@ -23,10 +24,16 @@ namespace CaveSystem2020
         double stubTop = 200;
         public double firstNodeToPanel;
         public bool LengthCompliance = true;
+        public bool NoMeshPoint = false;
         public StubMember(Point3d g1, MeshNode m1, List<Line> framing)
         {
             if (!m1.pointset)
+            {
+                NoMeshPoint = true;
+                
                 return;
+            }
+                
             grid1 = g1;
             mesh1 = m1.point;
             toPanel = mesh1 - g1;
@@ -55,29 +62,41 @@ namespace CaveSystem2020
         }
         private void FindStubEnd()
         {
-            double maxDist = double.MinValue;
-            double minDist = double.MaxValue;
-            foreach(Point3d p in axisNodes)
+            if (axisNodes.Count==0)
             {
-                if(mesh1.DistanceTo(p) > maxDist)
-                {
-                    maxDist = mesh1.DistanceTo(p);
-                    stubEnd = p;
-                }
-                if(mesh1.DistanceTo(p) < minDist)
-                {
-                    minDist = mesh1.DistanceTo(p);
-                    firstNode = p;
-                }
+                stubEnd = mesh1 - toPanel * 300 ;
             }
-            firstNodeToPanel = minDist;
-            if (firstNodeToPanel >= minStub && firstNodeToPanel <= maxStub)
-                LengthCompliance = true;
             else
-                LengthCompliance = false;
-            if (stubEnd.X == 0 && stubEnd.Y==0)
-                return;
+            {
+                double maxDist = double.MinValue;
+                double minDist = double.MaxValue;
+                foreach (Point3d p in axisNodes)
+                {
+                    if (mesh1.DistanceTo(p) > maxDist)
+                    {
+                        maxDist = mesh1.DistanceTo(p);
+                        stubEnd = p;
+                    }
+                    if (mesh1.DistanceTo(p) < minDist)
+                    {
+                        minDist = mesh1.DistanceTo(p);
+                        firstNode = p;
+                    }
+                }
+                firstNodeToPanel = minDist;
+                if (firstNodeToPanel >= minStub && firstNodeToPanel <= maxStub)
+                    LengthCompliance = true;
+                else
+                    LengthCompliance = false;
+            }
+                
+            frameGridNode = stubEnd;
             stubEnd = stubEnd - toPanel * stubTop;
+            Stub = new Line(mesh1, stubEnd);
+        }
+        public void Update(Point3d newend)
+        {
+            stubEnd = newend;
             Stub = new Line(mesh1, stubEnd);
         }
     }
