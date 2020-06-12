@@ -25,6 +25,7 @@ namespace CaveSystem2020
         public double firstNodeToPanel;
         public bool LengthCompliance = true;
         public bool NoMeshPoint = false;
+        MeshNode meshnode;
         public StubMember(Point3d g1, MeshNode m1, List<Line> framing)
         {
             if (!m1.pointset)
@@ -33,7 +34,7 @@ namespace CaveSystem2020
                 
                 return;
             }
-                
+            meshnode = m1;
             grid1 = g1;
             mesh1 = m1.point;
             toPanel = mesh1 - g1;
@@ -92,12 +93,19 @@ namespace CaveSystem2020
                 
             frameGridNode = stubEnd;
             stubEnd = stubEnd - toPanel * stubTop;
-            Stub = new Line(mesh1, stubEnd);
+            setStub();
         }
         public void Update(Point3d newend)
         {
             stubEnd = newend;
-            Stub = new Line(mesh1, stubEnd);
+            setStub();
+        }
+        private void setStub()
+        {
+            if (meshnode.isGhost)
+                Stub = new Line(frameGridNode, stubEnd);
+            else
+                Stub = new Line(stubEnd, mesh1);
         }
     }
 }

@@ -22,11 +22,15 @@ namespace CaveSystem2020
             "HANGER",
             "WALL CORNER STUB",
             "WALL INTERNAL STUB",
-            "WALL SUBFRAME",
+            "WALL EXTRA INTERNAL STUB",
+            "WALL SUBFRAME X",
+            "WALL SUBFRAME Y",
             "WALL CANTILEVER BEAM",
             "HANG CORNER STUB",
             "HANG INTERNAL STUB",
-            "HANG SUBFRAME",
+            "HANG EXTRA INTERNAL STUB",
+            "HANG SUBFRAME X",
+            "HANG SUBFRAME Y",
             "DIAGONAL BRACING",
             "GSA MESH",
             "INTERNAL COLUMN",
@@ -36,18 +40,22 @@ namespace CaveSystem2020
             "CAVE PANELS",
             "SUB FRAME ANGLE COMPLIANCE FAIL",
             "SUB FRAME STUB LENGTH COMPLIANCE FAIL",
-            "DUMMY GSA LINES"
+            "DUMMY GSA LINES",
+            "WALL DIAGONAL",
+
         };
         List<Color> layerColors = new List<Color>()
         {
             Color.FromArgb( 229,34,145),
             Color.FromArgb( 255,0,218),
             Color.Black,
+            Color.HotPink,
             Color.FromArgb( 183,61,203),
             Color.FromArgb( 191,63,63),
             Color.FromArgb( 72,0,255),
             Color.Black,
             Color.FromArgb( 61,61,203),
+            Color.HotPink,
             Color.FromArgb( 34,90,229),
             Color.FromArgb( 0,145,255),
             Color.FromArgb( 34,229,201),
@@ -57,7 +65,10 @@ namespace CaveSystem2020
             Color.HotPink,
             Color.Red,
             Color.Red,
-            Color.BlueViolet
+            Color.BlueViolet,
+            Color.FromArgb( 229,34,145),
+            Color.FromArgb( 255,0,218),
+            Color.Crimson,
         };
         public Documenter()
         {
@@ -105,39 +116,51 @@ namespace CaveSystem2020
         {
             if (orientation == Orientation.Ceiling)
             {
-                AddLines(supportAssembly.hanger, "HANGER");
+                AddLines(supportAssembly.hangerA, "HANGER");
+                AddLines(supportAssembly.hangerB, "HANGER");
                 AddLines(supportAssembly.connection, "CONNECTION");
                 //AddLines(supportAssembly.cornerStub, "HANG CORNER STUB");
             }
-            if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
+            else
             {
-                AddLines(supportAssembly.hanger, "WALL CANTILEVER BEAM");
+                AddLines(supportAssembly.hangerA, "WALL CANTILEVER BEAM");
+                AddLines(supportAssembly.hangerB, "WALL CANTILEVER BEAM");
                 AddLines(supportAssembly.connection, "CONNECTION");
+                AddLines(supportAssembly.brace, "WALL DIAGONAL");
                 //AddLines(supportAssembly.cornerStub, "WALL CORNER STUB");
             }
-            }
+        }
         private void AddPanelFrames(List<PanelFrame> panelFrames, Orientation orientation)
         {
             foreach(PanelFrame panelFrame in panelFrames)
             {
+                if (panelFrame.FailedFrame) continue;
                 AddMesh(panelFrame.CavePanels, "CAVE PANELS");
                 AddMesh(panelFrame.GSAmesh, "GSA MESH"); 
                 AddLines(panelFrame.DummyGSALines, "DUMMY GSA LINES");
-                string subframeLayer = "HANG SUBFRAME";
-                string cornerStubLayer = "HANG CORNER STUB";
-                string internalStubLayer = "HANG INTERNAL STUB";
-                if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
+                string subframeLayerX = "WALL SUBFRAME X";
+                string subframeLayerY = "WALL SUBFRAME Y";
+                string cornerStubLayer = "WALL CORNER STUB";
+                string internalStubLayer = "WALL INTERNAL STUB";
+                string extraInternalStubLayer = "WALL EXTRA INTERNAL STUB";
+                if (orientation == Orientation.Ceiling)
                 {
-                    subframeLayer = "WALL SUBFRAME";
-                    cornerStubLayer = "WALL CORNER STUB";
-                    internalStubLayer = "WALL INTERNAL STUB";
+                    subframeLayerX = "HANG SUBFRAME X";
+                    subframeLayerY = "HANG SUBFRAME Y";
+                    cornerStubLayer = "HANG CORNER STUB";
+                    internalStubLayer = "HANG INTERNAL STUB";
+                    extraInternalStubLayer = "HANG EXTRA INTERNAL STUB";
                 }
-                AddLines(panelFrame.frameLines, subframeLayer);
-                
+                AddLines(panelFrame.frameLinesX, subframeLayerX);
+                AddLines(panelFrame.frameLinesY, subframeLayerY);
                 foreach (StubMember stubMember in panelFrame.internalStub)
                     AddStubLine(stubMember, internalStubLayer);
+                
+                    
                 foreach (StubMember stubMember in panelFrame.cornerStub)
                     AddStubLine(stubMember, cornerStubLayer);
+
+                AddLines(panelFrame.meshExtraSupport.Stubs, extraInternalStubLayer);
             }
         }
         private void AddMesh(Mesh mesh, string layer)

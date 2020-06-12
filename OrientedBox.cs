@@ -29,6 +29,8 @@ namespace CaveSystem2020
         public Plane SideZmaxPlane;
         public Plane SideXminPlane;
         public Plane SideXmaxPlane;
+        public Plane SideYminPlane;
+        public Plane SideYmaxPlane;
         public Line xAxis;
         public Line yAxis;
         public Line zAxis;
@@ -73,10 +75,19 @@ namespace CaveSystem2020
             SideXmaxPlane.XAxis = ReferencePlane.ZAxis;
             SideXmaxPlane.ZAxis = ReferencePlane.XAxis * -1;
 
-            //CheckPlane(SideZminPlane);
-            //CheckPlane(SideZmaxPlane);
-            //CheckPlane(SideXminPlane);
-            //CheckPlane(SideXmaxPlane);
+            SideYminPlane = ReferencePlane;
+            SideYminPlane.Origin = ReferencePlane.Origin + ReferencePlane.XAxis * xDim + ReferencePlane.ZAxis * zDim;
+            SideYminPlane.XAxis = ReferencePlane.ZAxis * -1;
+            SideYminPlane.YAxis = ReferencePlane.XAxis * -1;
+            SideYminPlane.ZAxis = ReferencePlane.YAxis;
+
+            SideYmaxPlane = ReferencePlane;
+            SideYmaxPlane.Origin = ReferencePlane.Origin + ReferencePlane.XAxis * xDim + ReferencePlane.YAxis * yDim;
+            SideYmaxPlane.XAxis = ReferencePlane.ZAxis;
+            SideYmaxPlane.ZAxis = ReferencePlane.YAxis * -1;
+            SideYmaxPlane.YAxis = ReferencePlane.XAxis * -1;
+
+            //CheckPlane(SideYminPlane);
         }
         public Plane PlaneSelection(Orientation orientation)
         {
@@ -86,10 +97,14 @@ namespace CaveSystem2020
                     return SideZmaxPlane;
                 case Orientation.Floor:
                     return SideZminPlane;
-                case Orientation.SideFar:
+                case Orientation.SideSouth:
                     return SideXmaxPlane;
-                case Orientation.SideNear:
+                case Orientation.SideNorth:
                     return SideXminPlane;
+                case Orientation.SideEast:
+                    return SideYmaxPlane;
+                case Orientation.SideWest:
+                    return SideYminPlane;
                 default:
                     return ReferencePlane;
             }

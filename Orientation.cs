@@ -10,7 +10,9 @@ namespace CaveSystem2020
     {
         Ceiling,
         Floor,
-        SideNear,
-        SideFar
+        SideNorth,
+        SideSouth,
+        SideEast,
+        SideWest
     }
 }

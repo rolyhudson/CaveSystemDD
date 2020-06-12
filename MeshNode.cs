@@ -11,5 +11,6 @@ namespace CaveSystem2020
     {
         public Point3d point = new Point3d();
         public bool pointset;
+        public bool isGhost = false; 
     }
 }

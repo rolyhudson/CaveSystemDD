@@ -14,9 +14,10 @@ namespace CaveSystem2020
         Parameters parameters;
         List<Brep> breps = new List<Brep>();
         List<Curve> centreLines = new List<Curve>();
-        public List <Line> hanger = new List<Line>();
+        public List <Line> hangerA = new List<Line>();
+        public List<Line> hangerB = new List<Line>();
         public List<Line> connection = new List<Line>();
-        
+        public List<Line> brace = new List<Line>();
         Orientation orientation;
         Plane orientationPlane;
 
@@ -26,42 +27,34 @@ namespace CaveSystem2020
             orientationPlane = plane;
             orientation = iorientation;
 
-            FindColumnBreps();
-            FindBeamCentres();
+            FindSupportGeo();
+            
         }
-        private void FindColumnBreps()
+        private void FindSupportGeo()
         {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer("COLUMNS");
+            string supportLayer = "COLUMNS_cls";
+
+            if (orientation == Orientation.Ceiling)
+                supportLayer = "roof";
+            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer(supportLayer);
             foreach (RhinoObject obj in objs)
             {
                 if (obj.ObjectType == ObjectType.Brep)
-                {
                     breps.Add(obj.Geometry as Brep);
-                   
-                }
-            }
-        }
-        private void FindBeamCentres()
-        {
-            RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer("BEAMS");
-            foreach (RhinoObject obj in objs)
-            {
                 if (obj.ObjectType == ObjectType.Curve)
-                {
                     centreLines.Add(obj.Geometry as Curve);
-
-                }
             }
         }
-        private void SimpleHanger(Point3d p1)
+        
+        private void SimpleHanger(Point3d p1, ref List<Line> container)
         {
 
             Point3d envelope = FindConnectionPoint(p1);
             if (envelope.Z == 0)
                 return;
-            hanger.Add(new Line(p1, envelope));
+            container.Add(new Line(p1, envelope));
         }
-        private Line SetHangerAssembly(Point3d p1, Point3d p2)
+        private Line SetHangerAssembly(Point3d p1, Point3d p2,ref List<Line> container)
         {
             //offset a test plane
             Plane testPlane = new Plane(orientationPlane.Origin + orientationPlane.Normal * -100000, orientationPlane.Normal);
@@ -90,21 +83,18 @@ namespace CaveSystem2020
 
 
             Point3d envelope = FindConnectionPoint(mid);
-            hanger.Add(new Line(mid, envelope));
+            container.Add(new Line(mid, envelope));
 
             return bridge;
         }
         private Point3d FindConnectionPoint(Point3d refPoint)
         {
             Point3d connection = new Point3d();
-            if (orientation == Orientation.SideNear || orientation == Orientation.SideFar)
-            {
+            if (orientation == Orientation.Ceiling)
                 connection = CaveTools.ClosestProjected(breps, refPoint, orientationPlane.Normal * -1);
-                
-            }
-            if(orientation == Orientation.Ceiling)
+            else
             {
-                connection = CaveTools.ClosestPoint(centreLines, refPoint);
+                connection = CaveTools.ClosestPoint(centreLines, refPoint, orientationPlane.Normal * -1);
                 Plane testPlane = new Plane(connection, orientationPlane.Normal);
                 double dist1 = refPoint.DistanceTo(testPlane.ClosestPoint(refPoint));
                 connection = refPoint - orientationPlane.Normal * dist1;
@@ -115,44 +105,59 @@ namespace CaveSystem2020
         {
             for (int i = 0; i < panelFrames.Count; i++)
             {
-                if (panelFrames[i].cornerStub.Count < 4)
-                    continue;
-                if(!panelFrames[i].FailedFrame)
+
+                if (i < panelFrames.Count - 1)
                 {
-                    if (i < panelFrames.Count - 1)
+                    if (!panelFrames[i + 1].FailedFrame)
                     {
-                        if (!panelFrames[i + 1].FailedFrame)
+                        Line b1 = SetHangerAssembly(panelFrames[i].cornerStub[2].stubEnd, panelFrames[i + 1].cornerStub[0].stubEnd, ref hangerA);
+                        UpdateStubs(panelFrames[i].cornerStub[2], panelFrames[i + 1].cornerStub[0], b1);
+
+                        Line b2 = SetHangerAssembly(panelFrames[i].cornerStub[3].stubEnd, panelFrames[i + 1].cornerStub[1].stubEnd, ref hangerB);
+                        UpdateStubs(panelFrames[i].cornerStub[3], panelFrames[i + 1].cornerStub[1], b2);
+                    }
+                    if (i > 0)
+                    {
+                        if (panelFrames[i - 1].FailedFrame)
                         {
-                            Line b1 = SetHangerAssembly(panelFrames[i].cornerStub[2].stubEnd, panelFrames[i + 1].cornerStub[0].stubEnd);
-                            UpdateStubs(panelFrames[i].cornerStub[2], panelFrames[i + 1].cornerStub[0], b1);
-                            Line b2 = SetHangerAssembly(panelFrames[i].cornerStub[3].stubEnd, panelFrames[i + 1].cornerStub[1].stubEnd);
-                            UpdateStubs(panelFrames[i].cornerStub[3], panelFrames[i + 1].cornerStub[1], b2);
-                        }
-                        if(i > 0 )
-                        {
-                            if (panelFrames[i - 1].FailedFrame)
-                            {
-                                SimpleHanger(panelFrames[i].cornerStub[0].stubEnd);
-                                SimpleHanger(panelFrames[i].cornerStub[1].stubEnd);
-                            }
+                            SimpleHanger(panelFrames[i].cornerStub[0].stubEnd, ref hangerA);
+                            SimpleHanger(panelFrames[i].cornerStub[1].stubEnd, ref hangerB);
                         }
                     }
-                    if (i == 0)
-                    {
-                        SimpleHanger(panelFrames[i].cornerStub[0].stubEnd);
-                        SimpleHanger(panelFrames[i].cornerStub[1].stubEnd);
-                    }
-                    if (i == panelFrames.Count - 1)
-                    {
-                        SimpleHanger(panelFrames[i].cornerStub[2].stubEnd);
-                        SimpleHanger(panelFrames[i].cornerStub[3].stubEnd);
-                    }
+                }
+                if (i == 0)
+                {
+                    SimpleHanger(panelFrames[i].cornerStub[0].stubEnd, ref hangerA);
+                    SimpleHanger(panelFrames[i].cornerStub[1].stubEnd, ref hangerB);
+                }
+                if (i == panelFrames.Count - 1)
+                {
+                    SimpleHanger(panelFrames[i].cornerStub[2].stubEnd, ref hangerA);
+                    SimpleHanger(panelFrames[i].cornerStub[3].stubEnd, ref hangerB);
                 }
                 CaveTools.CheckLines(panelFrames[i].cornerStub.Select(x => x.Stub).ToList());
             }
-            CaveTools.CheckLines(hanger);
+            CaveTools.CheckLines(hangerA);
+            CaveTools.CheckLines(hangerB);
             CaveTools.CheckLines(connection);
-            
+            if(orientation != Orientation.Ceiling)
+            {
+                HangerBrace(hangerA);
+                HangerBrace(hangerB);
+            }
+            CaveTools.CheckLines(brace);
+        }
+        private void HangerBrace(List<Line> hanger)
+        {
+            List<Line> verticalsort = hanger.OrderBy(x => x.FromZ).ToList();
+            //min 2 hangers for one panel
+            for(int i = 1; i < verticalsort.Count; i++)
+            {
+                if(verticalsort[i].Length> 1000)
+                {
+                    brace.Add(new Line(verticalsort[i-1].To, verticalsort[i].From));
+                }
+            }
         }
         private void UpdateStubs(StubMember stub1, StubMember stub2, Line bridge)
         {

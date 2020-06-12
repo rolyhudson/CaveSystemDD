@@ -156,6 +156,20 @@ namespace CaveSystem2020
             Point3d centroid = new Point3d(x / m.Vertices.Count, y / m.Vertices.Count, z / m.Vertices.Count);
             return centroid;
         }
+        public static Point3d averagePoint(List<Point3d> points)
+        {
+            double x = 0;
+            double y = 0;
+            double z = 0;
+            foreach (Point3d p in points)
+            {
+                x += p.X;
+                y += p.Y;
+                z += p.Z;
+            }
+            Point3d centroid = new Point3d(x / points.Count, y / points.Count, z / points.Count);
+            return centroid;
+        }
         public static Vector3d averageVector(Mesh m)
         {
             double x = 0;
@@ -170,17 +184,22 @@ namespace CaveSystem2020
             Vector3d centroid = new Vector3d(x / m.Normals.Count, y / m.Normals.Count, z / m.Normals.Count);
             return centroid;
         }
-        public static Brep findBBoxGivenPlane(Plane pln, Mesh m)
+        public static Brep findBBoxGivenPlane(Plane pln, Mesh m, Point3d XMinPt, Point3d XMaxPt)
         {
             List<Point3d> pts = new List<Point3d>();
-
+            Point3d remapped = new Point3d();
             foreach (Point3d p in m.Vertices)
             {
-                Point3d remapped = new Point3d();
+                
                 pln.RemapToPlaneSpace(p, out remapped);
 
                 pts.Add(remapped);
             }
+
+            pln.RemapToPlaneSpace(XMinPt, out remapped);
+            pts.Add(remapped);
+            pln.RemapToPlaneSpace(XMaxPt, out remapped);
+            pts.Add(remapped);
 
             BoundingBox bBox = new BoundingBox(pts);
             Brep brep = bBox.ToBrep();
@@ -188,10 +207,18 @@ namespace CaveSystem2020
             brep.Transform(xform);
             return brep;
         }
-        public static OrientedBox FindOrientedBox(Plane pln, Mesh m)
+        public static OrientedBox FindOrientedBox(Plane pln, Mesh m, double width)
         {
-            Brep box = findBBoxGivenPlane(pln, m);
+            if (m.Faces.Count == 0)
+                return null;
+            
+            Plane xminPlane = new Plane(pln.Origin, pln.YAxis);
+            Plane xmaxPlane = new Plane(pln.Origin + pln.YAxis * width, pln.YAxis);
+            Point3d xmin = xminPlane.ClosestPoint(m.Vertices[0]);
+            Point3d xmax = xmaxPlane.ClosestPoint(m.Vertices[0]);
+            Brep box = findBBoxGivenPlane(pln, m,xmin,xmax);
             OrientedBox orientedBox = new OrientedBox(box, pln);
+            
             return orientedBox;
         }
         public static Point3d ClosestProjected(List<Brep> breps, Point3d testPoint,Vector3d direction)
@@ -212,7 +239,7 @@ namespace CaveSystem2020
             }
             return closest;
         }
-        public static Point3d ClosestPoint(List<Curve> curves, Point3d testPoint)
+        public static Point3d ClosestPoint(List<Curve> curves, Point3d testPoint, Vector3d direction)
         {
 
             double distMin = double.MaxValue;
@@ -222,10 +249,27 @@ namespace CaveSystem2020
             {
                 c.ClosestPoint(testPoint, out t);
                 Point3d temp = c.PointAt(t);
+                
+                //RhinoDoc.ActiveDoc.Objects.AddLine(new Line(temp,testPoint));
+                
                 if (temp.DistanceTo(testPoint) < distMin)
                 {
                     distMin = temp.DistanceTo(testPoint);
                     closest = temp;
+                }
+            }
+            return closest;
+        }
+        public static Point3d ClosestPoint(Point3d test, List<Point3d> points)
+        {
+            double minDist = double.MaxValue;
+            Point3d closest = new Point3d();
+            foreach(Point3d p in points)
+            {
+                if(p.DistanceTo(test)< minDist)
+                {
+                    minDist = p.DistanceTo(test);
+                    closest = p;
                 }
             }
             return closest;

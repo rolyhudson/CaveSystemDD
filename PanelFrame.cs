@@ -10,8 +10,9 @@ namespace CaveSystem2020
 {
     class PanelFrame
     {
-        Plane localPlane;
-        double xdim;
+        public Plane localPlane;
+        public Plane refPlane;
+        public double xdim;
         double ydim;
         Parameters parameters;
         public Mesh CavePanels;
@@ -28,64 +29,87 @@ namespace CaveSystem2020
         List<List<Point3d>> frameGrid = new List<List<Point3d>>();
         public List<StubMember> internalStub  = new List<StubMember>();
         public List<FrameMember> subFrame = new List<FrameMember>();
-        public List<Line> frameLines = new List<Line>();
+        public List<Line> frameLinesX = new List<Line>();
+        public List<Line> frameLinesY = new List<Line>();
         public List<Point3d> frameCorners = new List<Point3d>();
+        public List<Point3d> extraMeshNodes = new List<Point3d>();
         public List<Line> DummyGSALines = new List<Line>();
         
         public Mesh GSAmesh;
         public List<List<MeshNode>> meshnodes = new List<List<MeshNode>>();
         public List<StubMember> cornerStub = new List<StubMember>();
-        public PanelFrame(Plane local, double x, Parameters param, Mesh p, int num, int groupNum, double iydim)
+        public MeshExtraSupport meshExtraSupport = new MeshExtraSupport();
+        public double panelArea = 0;
+        bool ghostNodesFound =false;
+        public PanelFrame(Plane local, double panelXDim, Parameters param, Mesh p, int num, double panelYDim)
         {
-            localPlane = local;
-            xdim = x;
-            ydim = param.yCell;
+            if (p == null)
+            {
+                FailedFrame = true;
+                return;
+            }
+            if (p.Faces.Count == 0)
+            {
+                FailedFrame = true;
+                return;
+            }
+            refPlane = local;
+            xdim = panelXDim;
+            ydim = panelYDim;
             parameters = param;
             CavePanels = p;
             number = num;
-            familyCount = groupNum;
+            //familyCount = groupNum;
             SetLocalPlane();
             //OrientedBox.CheckPlane(localPlane);
-            
+            SetPanelArea();
             SetPointGrid();
             SetMeshNodes();
             FindMeshNodes();
             SetSubFrame();
             SetStubsFrameNodes();
             
-            SetFrameLines();
+            SetFrameLines(ref frameGrid, ref frameLinesX,ref frameLinesY);
+            if(ghostNodesFound)
+                GetMissingMeshStubs();
+            MakeGSAMesh();
             MakeDummyGSALines();
-            CheckGeometry();
+            
         }
-        private void CheckGeometry()
+        private void SetPanelArea()
+        {
+            AreaMassProperties amp = AreaMassProperties.Compute(CavePanels);
+            panelArea = amp.Area;
+        }
+        public void CheckGeometry()
         {
             
             //CaveTools.CheckLines(subFrame.Select(x => x.frameLine).ToList());
             CaveTools.CheckLines(internalStub.Select(x => x.Stub).ToList());
+            CaveTools.CheckLines(meshExtraSupport.Stubs.Select(x => x).ToList());
             //CaveTools.CheckLines(cornerStub.Select(x => x.Stub).ToList());
-            CaveTools.CheckLines(DummyGSALines);
-            CaveTools.CheckLines(frameLines);
-            //RhinoDoc.ActiveDoc.Objects.AddMesh(GSAmesh);
+            //CaveTools.CheckLines(DummyGSALines);
+            CaveTools.CheckLines(frameLinesX);
+            CaveTools.CheckLines(frameLinesY);
+            RhinoDoc.ActiveDoc.Objects.AddMesh(GSAmesh);
         }
         private void SetLocalPlane()
         {
             ydim -= parameters.cellGap;
-            
-            //if (number == 0)
-            //{
-            //    xdim -= parameters.cellGap / 2;
-            //    localPlane.Origin = localPlane.Origin + localPlane.XAxis * 5 + localPlane.YAxis * parameters.cellGap / 2;
-            //}
-            //else if (number == familyCount - 1)
-            //{
-            //    xdim -= parameters.cellGap/2 - 2;
-            //    localPlane.Origin = localPlane.Origin + localPlane.XAxis * (parameters.cellGap / 2 -5) + localPlane.YAxis * parameters.cellGap / 2;
-            //}
-            
             //standard case
             xdim -= parameters.cellGap;
-            localPlane.Origin = localPlane.Origin + localPlane.XAxis * parameters.cellGap / 2 + localPlane.YAxis * parameters.cellGap / 2;
+            localPlane = refPlane;
+            localPlane.Origin = refPlane.Origin + refPlane.XAxis * parameters.cellGap / 2 + refPlane.YAxis * parameters.cellGap / 2;
             
+        }
+        private void GetMissingMeshStubs()
+        {
+            List<Line> planarGrid = new List<Line>();
+            SetFrameLines(ref nodeGrid, ref planarGrid, ref planarGrid);
+            List<Line> allframes = new List<Line>();
+            allframes.AddRange(frameLinesX);
+            allframes.AddRange(frameLinesY);
+            meshExtraSupport.SetExtraSupport(localPlane, CavePanels, planarGrid,nodeGrid, allframes, parameters);
         }
         private void SetPointGrid()
         {
@@ -119,68 +143,7 @@ namespace CaveSystem2020
                 meshnodes.Add(nodes);
             }
         }
-        private void GetMissingNodeGrid()
-        {
-            if (meshBoundarySet)
-                return;
-            meshBoundarySet = true;
-            Polyline[] outlines = CavePanels.GetOutlines(localPlane);
-            boundaryMesh = NurbsCurve.Create(false,2, outlines[0]);
-            Curve[] offsets = boundaryMesh.ToNurbsCurve().Offset(localPlane, parameters.cellGap / -2.0,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance, CurveOffsetCornerStyle.Smooth);
-            List<Curve> simple = new List<Curve>();
-            foreach (Curve o in offsets)
-            {
-                Curve s = o.Simplify(CurveSimplifyOptions.RebuildLines, 50, 0.5);
-                simple.Add(s);
-                RhinoDoc.ActiveDoc.Objects.AddCurve(s);
-            }
-                
-
-            for (int c = 0; c < nodeGrid.Count; c++)
-            {
-                List<Point3d> pts = new List<Point3d>();
-                for (int d = 0; d < nodeGrid[c].Count; d++)
-                {
-                    //find closest point in grid plane
-                    List<Point3d> intersectPoints = new List<Point3d>();
-                    //foreach (Curve o in simple)
-                    //{
-                    //    Plane PlaneY = new Plane(nodeGrid[c][d], localPlane.XAxis);
-                    //    Plane PlaneX = new Plane(nodeGrid[c][d], localPlane.YAxis);
-                    //    var interX = Rhino.Geometry.Intersect.Intersection.CurvePlane(o, PlaneX, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    //    var interY = Rhino.Geometry.Intersect.Intersection.CurvePlane(o, PlaneY, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
-                    //    if (interX!=null)
-                    //        intersectPoints.Add(interX[0].PointA);
-                    //    if (interY != null)
-                    //        intersectPoints.Add(interY[0].PointA);
-                    //}
-                    double minDist = double.MaxValue;
-                    Point3d closest = new Point3d();
-                    if (intersectPoints.Count == 0)
-                    {
-                        double t = 0;
-                        foreach (Curve o in simple)
-                        {
-                            o.ClosestPoint(nodeGrid[c][d], out t);
-                            intersectPoints.Add(o.PointAt(t));
-                        }
-                    }
-                    foreach (Point3d p in intersectPoints)
-                    {
-                        if (p.DistanceTo(nodeGrid[c][d]) < minDist)
-                        {
-                            minDist = p.DistanceTo(nodeGrid[c][d]);
-                            closest = p;
-                        }
-                    }
-
-                    
-                    pts.Add(closest);
-                }
-                missingMeshNodeGrid.Add(pts);
-            }
-                    
-        }
+        
         private void FindMeshNodes()
         {
             for (int c = 0; c < nodeGrid.Count; c++)
@@ -216,17 +179,16 @@ namespace CaveSystem2020
                             }
                             
                         }
-                        
-                        RhinoDoc.ActiveDoc.Objects.AddPoint(closest);
-                        
                         meshnodes[c][d].point = closest;
                         meshnodes[c][d].pointset = true;
-                        RhinoDoc.ActiveDoc.Objects.AddPoint(meshnodes[c][d].point);
+                        meshnodes[c][d].isGhost = true;
+                        ghostNodesFound = true;
+                        //RhinoDoc.ActiveDoc.Objects.AddPoint(meshnodes[c][d].point);
                     }
                     
                 }
             }
-            MakeGSAMesh();
+            
         }
         private void MakeGSAMesh()
         {
@@ -246,39 +208,41 @@ namespace CaveSystem2020
         }
         private void MakeDummyGSALines()
         {
-            for (int i = 0; i < meshnodes.Count; i++)
-            {
-                for (int j = 0; j < meshnodes[i].Count; j++)
-                {
-                    Line line = new Line();
-                    if (i < meshnodes.Count - 1 && j < meshnodes[i].Count - 1)
-                    {
-                        //meshnodes[i][j], meshnodes[i][j + 1], meshnodes[i + 1][j + 1]
+            //for (int i = 0; i < meshnodes.Count; i++)
+            //{
+            //    for (int j = 0; j < meshnodes[i].Count; j++)
+            //    {
+            //        Line line = new Line();
+            //        if (i < meshnodes.Count - 1 && j < meshnodes[i].Count - 1)
+            //        {
+            //            //meshnodes[i][j], meshnodes[i][j + 1], meshnodes[i + 1][j + 1]
                        
-                        if (FromMeshNodes(meshnodes[i][j], meshnodes[i][j + 1], ref line))
-                            DummyGSALines.Add(line);
-                        if (FromMeshNodes(meshnodes[i][j + 1], meshnodes[i + 1][j + 1], ref line))
-                            DummyGSALines.Add(line);
+            //            if (FromMeshNodes(meshnodes[i][j], meshnodes[i][j + 1], ref line))
+            //                DummyGSALines.Add(line);
+            //            if (FromMeshNodes(meshnodes[i][j + 1], meshnodes[i + 1][j + 1], ref line))
+            //                DummyGSALines.Add(line);
                         
                         
-                        if (FromMeshNodes(meshnodes[i][j], meshnodes[i + 1][j + 1], ref line))
-                            DummyGSALines.Add(line);
-                        else
-                        {
-                            if (FromMeshNodes(meshnodes[i][j + 1], meshnodes[i + 1][j], ref line))
-                                DummyGSALines.Add(line);
-                        }
-                    }
-                    if(i == meshnodes.Count - 1 && j < meshnodes[i].Count - 1)
-                    {
-                        if (FromMeshNodes(meshnodes[i][j], meshnodes[i][j + 1], ref line))
-                            DummyGSALines.Add(line);
-                    }
-                    if(j == 0 && i < meshnodes.Count - 1)
-                        if (FromMeshNodes(meshnodes[i][j], meshnodes[i+1][j], ref line))
-                            DummyGSALines.Add(line);
-                }
-            }
+            //            if (FromMeshNodes(meshnodes[i][j], meshnodes[i + 1][j + 1], ref line))
+            //                DummyGSALines.Add(line);
+            //            else
+            //            {
+            //                if (FromMeshNodes(meshnodes[i][j + 1], meshnodes[i + 1][j], ref line))
+            //                    DummyGSALines.Add(line);
+            //            }
+            //        }
+            //        if(i == meshnodes.Count - 1 && j < meshnodes[i].Count - 1)
+            //        {
+            //            if (FromMeshNodes(meshnodes[i][j], meshnodes[i][j + 1], ref line))
+            //                DummyGSALines.Add(line);
+            //        }
+            //        if(j == 0 && i < meshnodes.Count - 1)
+            //            if (FromMeshNodes(meshnodes[i][j], meshnodes[i+1][j], ref line))
+            //                DummyGSALines.Add(line);
+            //    }
+            //}
+            for(int i= 0;i <  GSAmesh.TopologyEdges.Count;i++)
+                DummyGSALines.Add(GSAmesh.TopologyEdges.EdgeLine(i));
         }
         private bool FromMeshNodes(MeshNode start, MeshNode end, ref Line line)
         {
@@ -293,10 +257,13 @@ namespace CaveSystem2020
         {
             //max for possible nodes in order
             Mesh mesh = new Mesh();
-            foreach (MeshNode mn in nodes)
+            GetMeshVertices(ref mesh, nodes);
+            if (mesh.Vertices.Count == 5)
             {
-                if (mn.pointset)
-                    mesh.Vertices.Add(mn.point);
+
+                mesh.Faces.AddFace(2, 0, 1);
+                mesh.Faces.AddFace(0, 2, 3);
+                mesh.Faces.AddFace(0,3,4);
             }
             if (mesh.Vertices.Count == 4)
             {
@@ -310,7 +277,51 @@ namespace CaveSystem2020
             }
             return mesh;
         }
-       
+        private void GetMeshVertices(ref Mesh mesh, List<MeshNode> nodes)
+        {
+            List<Point3d> vertices = new List<Point3d>();
+            foreach (MeshNode mn in nodes)
+                if(!mn.isGhost) vertices.Add(mn.point);
+
+            if (nodes.Exists(x => x.isGhost))
+            {
+                List<Point3d> ptsPlane = new List<Point3d>();
+                foreach (MeshNode mn in nodes)
+                    ptsPlane.Add(localPlane.ClosestPoint(mn.point));
+                
+                ptsPlane.Add(localPlane.ClosestPoint(nodes[0].point));
+                Polyline pl = new Polyline(ptsPlane);
+                
+                foreach(Point3d p in meshExtraSupport.meshpts)
+                {
+                    Point3d plnPt = localPlane.ClosestPoint(p);
+                    Point3d closest = pl.ClosestPoint(plnPt);
+                    if (closest.DistanceTo(plnPt) < parameters.cellGap / 4)
+                    {
+                        vertices.Add(p);
+                    }
+                }
+                mesh.Vertices.AddVertices(SortVertices(vertices, pl.ToNurbsCurve()));
+            }
+            else
+            {
+                mesh.Vertices.AddVertices(vertices);
+            }
+        }
+        private List<Point3d> SortVertices(List<Point3d> points, Curve curve)
+        {
+            Dictionary<Point3d, double> valuePairs = new Dictionary<Point3d, double>();
+            List<double> ts = new List<double>();
+            foreach(Point3d p in points)
+            {
+                double t = 0;
+                curve.ClosestPoint(p, out t);
+                ts.Add(t);
+                valuePairs.Add(p, t);
+            }
+            var ordered = valuePairs.OrderBy(x => x.Value);
+            return ordered.Select(x => x.Key).ToList();
+        }
         private void SetSubFrame()
         {
             for (int c = 0; c < nodeGrid.Count; c++)
@@ -336,30 +347,37 @@ namespace CaveSystem2020
             }
             
         }
-        private void SetFrameLines()
+        private void SetFrameLines(ref List<List<Point3d>> points,ref List<Line> linesC, ref List<Line> linesD)
         {
             for (int c = 0; c < nodeGrid.Count; c++)
             {
                 for (int d = 0; d < nodeGrid[c].Count; d++)
                 {
-                    if (frameGrid[c][d].X == 0)
+                    if (points[c][d].X == 0)
                         continue;
                     if (d < nodeGrid[c].Count - 1)
                     {
-                        if (frameGrid[c][d + 1].X == 0) 
+                        if (points[c][d + 1].X == 0) 
                             continue;
-                        Line frame = new Line(frameGrid[c][d], frameGrid[c][d + 1]);
-
-                        frameLines.Add(frame);
+                        Line frame = new Line(points[c][d], points[c][d + 1]);
+                        if (c == nodeGrid.Count - 1)
+                            frame.Flip();
+                        if(c ==1 && d ==1)
+                            frame.Flip();
+                        linesC.Add(frame);
 
                     }
 
                     if (c < nodeGrid.Count - 1)
                     {
-                        if (frameGrid[c + 1][d].X ==0 )
+                        if (points[c + 1][d].X ==0 )
                             continue;
-                        Line frame = new Line(frameGrid[c][d], frameGrid[c + 1][d]);
-                        frameLines.Add(frame);
+                        Line frame = new Line(points[c][d], points[c + 1][d]);
+                        if (d == nodeGrid.Count - 1)
+                            frame.Flip();
+                        if (c == 1 && d == 1)
+                            frame.Flip();
+                        linesD.Add(frame);
                     }
 
                 }
@@ -381,6 +399,8 @@ namespace CaveSystem2020
                     {
                         if (d == 0 || d == nodeGrid[c].Count - 1)
                             cornerStub.Add(stubMaker);
+                        else
+                            internalStub.Add(stubMaker);
                     }
    
                     else
