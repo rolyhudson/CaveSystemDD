@@ -25,11 +25,11 @@ namespace CaveSystem2020
             
             mesh = imesh;
             BayXY = bayPlane;
-            if (mesh == null)
+            if (mesh == null || mesh.DisjointMeshCount == 0)
                 return;
 
             orientedBox = CaveTools.FindOrientedBox(bayPlane, imesh, parameters.yCell);
-            RhinoDoc.ActiveDoc.Objects.AddBrep(orientedBox.BoundingBox);
+            //RhinoDoc.ActiveDoc.Objects.AddBrep(orientedBox.BoundingBox);
             orientationPlane = orientedBox.PlaneSelection(orientation);
             //OrientedBox.CheckPlane(orientationPlane);
             supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);

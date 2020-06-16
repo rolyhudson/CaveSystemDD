@@ -221,6 +221,19 @@ namespace CaveSystem2020
             
             return orientedBox;
         }
+        public static OrientedBox FindRefOrientedBox(Plane pln, Mesh m)
+        {
+            if (m.Faces.Count == 0)
+                return null;
+
+            
+            Point3d xmin = m.Vertices[0];
+            Point3d xmax = (Point3d)m.Vertices[0] + pln.Normal *1000;
+            Brep box = findBBoxGivenPlane(pln, m, xmin, xmax);
+            OrientedBox orientedBox = new OrientedBox(box, pln);
+            //RhinoDoc.ActiveDoc.Objects.AddBrep(box);
+            return orientedBox;
+        }
         public static Point3d ClosestProjected(List<Brep> breps, Point3d testPoint,Vector3d direction)
         {
             var points = Rhino.Geometry.Intersect.Intersection.ProjectPointsToBreps(breps, new List<Point3d>() { testPoint }, direction, RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
@@ -239,23 +252,30 @@ namespace CaveSystem2020
             }
             return closest;
         }
-        public static Point3d ClosestPoint(List<Curve> curves, Point3d testPoint, Vector3d direction)
+        public static Point3d ClosestPoint(List<Curve> curves, Point3d testPoint, Plane plane)
         {
 
-            double distMin = double.MaxValue;
+            double tMin = double.MaxValue;
+            double aMin = double.MaxValue;
+            
             Point3d closest = new Point3d();
             double t = 0;
             foreach (var c in curves)
             {
                 c.ClosestPoint(testPoint, out t);
                 Point3d temp = c.PointAt(t);
-                
+                Plane testPlane = new Plane(temp, plane.Normal);
                 //RhinoDoc.ActiveDoc.Objects.AddLine(new Line(temp,testPoint));
-                
-                if (temp.DistanceTo(testPoint) < distMin)
+                Line testLine = new Line(testPoint, plane.Normal * -5000);
+                Rhino.Geometry.Intersect.Intersection.LinePlane(testLine, testPlane, out t);
+                if (t < 0) continue;
+                Point3d planePt = testLine.PointAt(t);
+                if (t < tMin && planePt.DistanceTo(temp) < 300 && planePt.DistanceTo(testPoint) < 3000)
                 {
-                    distMin = temp.DistanceTo(testPoint);
-                    closest = temp;
+                    tMin = t;
+                    
+                    closest = testLine.PointAt(t);
+                    
                 }
             }
             return closest;

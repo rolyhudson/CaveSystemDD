@@ -102,7 +102,8 @@ namespace CaveSystem2020
             {
                 foreach(CaveElement caveElement in bayController.caveElements)
                 {
-                    AddSupportAssembly(caveElement.supportAssembly,caveElement.orientation);
+                    if(caveElement.supportAssembly!=null)
+                        AddSupportAssembly(caveElement.supportAssembly,caveElement.orientation);
                     AddPanelFrames(caveElement.panelFrames, caveElement.orientation);
                 }
             }

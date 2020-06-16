@@ -83,7 +83,8 @@ namespace CaveSystem2020
 
 
             Point3d envelope = FindConnectionPoint(mid);
-            container.Add(new Line(mid, envelope));
+            if(envelope.Z > 10)
+                container.Add(new Line(mid, envelope));
 
             return bridge;
         }
@@ -94,10 +95,10 @@ namespace CaveSystem2020
                 connection = CaveTools.ClosestProjected(breps, refPoint, orientationPlane.Normal * -1);
             else
             {
-                connection = CaveTools.ClosestPoint(centreLines, refPoint, orientationPlane.Normal * -1);
-                Plane testPlane = new Plane(connection, orientationPlane.Normal);
-                double dist1 = refPoint.DistanceTo(testPlane.ClosestPoint(refPoint));
-                connection = refPoint - orientationPlane.Normal * dist1;
+                connection = CaveTools.ClosestPoint(centreLines, refPoint, orientationPlane);
+                //Plane testPlane = new Plane(connection, orientationPlane.Normal);
+                //double dist1 = refPoint.DistanceTo(testPlane.ClosestPoint(refPoint));
+                //connection = refPoint - orientationPlane.Normal * dist1;
             }
             return connection;
         }

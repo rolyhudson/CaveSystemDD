@@ -40,6 +40,7 @@ namespace CaveSystem2020
             foreach(string layer in meshLayers)
             {
                 List<Mesh> meshes = SelectMeshes(layer, ReferencePlane);
+                meshes = NearFragments(meshes);
                 switch (layer)
                 {
                     case "CeilingMesh":
@@ -66,12 +67,16 @@ namespace CaveSystem2020
                     List<Mesh> splits = new List<Mesh>();
                     foreach (Mesh m in meshes)
                     {
-                        OrientedBox oBox = CaveTools.FindOrientedBox(ReferencePlane, m, parameters.yCell);
-                        splits.AddRange(WallSplit(oBox, m));
+                        List<Mesh> refFrags = SelectMeshes("refFragment", ReferencePlane);
+                        Mesh refMesh = new Mesh();
+                        refMesh.Append(m);
+                        refMesh.Append(refFrags);
+                        OrientedBox oBox = CaveTools.FindOrientedBox(ReferencePlane, refMesh, parameters.yCell);
+                        splits.AddRange(WallSplit3(oBox, m,refFrags));
                     }
                     meshes = splits;
                 }
-                meshes = NearFragments(meshes);
+                
                 foreach (Mesh m in meshes)
                 {
 
@@ -97,17 +102,18 @@ namespace CaveSystem2020
                         contained.Add(m);
                 }
             }
+            
             return contained;
         }
         private List<Mesh> NearFragments( List<Mesh> mainMeshes)
         {
             List<Mesh> frags = new List<Mesh>();
             Plane prev = new Plane(ReferencePlane);
-            prev.Origin = prev.Origin - ReferencePlane.YAxis * parameters.yCell/2;
+            prev.Origin = prev.Origin - ReferencePlane.YAxis * parameters.yCell*0.75;
             frags.AddRange(SelectMeshes("fragments", prev));
 
             Plane next = new Plane(ReferencePlane);
-            next.Origin = prev.Origin + ReferencePlane.YAxis * 1.5 * parameters.yCell;
+            next.Origin = prev.Origin + ReferencePlane.YAxis * 1.75 * parameters.yCell;
             frags.AddRange(SelectMeshes("fragments", next));
 
             if (frags.Count == 0)
@@ -173,6 +179,68 @@ namespace CaveSystem2020
                 p2 = p1 + orientationPlane.XAxis * cellSize;
                 if (orientationPlane.Origin.DistanceTo(p2) > boxDim)
                     lastPanel = true;
+            }
+            foreach (Mesh m in parts)
+                RhinoDoc.ActiveDoc.Objects.AddMesh(m);
+            return parts;
+        }
+        private List<Mesh> WallSplit2(OrientedBox orientedBox, Mesh mesh)
+        {
+            double cellSize = parameters.yCell;
+            double boxDim = orientedBox.xDim;
+            Plane orientationPlane = orientedBox.SideZmaxPlane;
+            double cumulativeDim = 0;
+            Point3d p1 = orientationPlane.Origin;
+            Point3d p2 = orientationPlane.Origin + orientationPlane.XAxis * cellSize;
+            double xPanel = cellSize;
+            List<Mesh> parts = new List<Mesh>();
+            bool lastPanel = false;
+
+            while (cumulativeDim < boxDim)
+            {
+
+                if (lastPanel)
+                {
+                    xPanel = boxDim - orientationPlane.Origin.DistanceTo(p1);
+                    if (xPanel < 10)
+                        break;
+                    if (xPanel < parameters.cellMin)
+                    {
+                        //reset previous to give end panel @ cellmin
+                        p1 = p1 - orientationPlane.XAxis * cellSize;
+                        p2 = orientationPlane.Origin + orientationPlane.XAxis * (boxDim - parameters.cellMin);
+                        parts.RemoveAt(parts.Count() - 1);
+                    }
+                }
+                Plane cut1 = new Plane(p1, orientationPlane.XAxis);
+                Plane cut2 = new Plane(p2, orientationPlane.XAxis * -1);
+                Mesh panel = CaveTools.splitTwoPlanes(cut1, cut2, mesh);
+                parts.Add(panel);
+
+                cumulativeDim += cellSize;
+
+                //set p1 and p2 for next part
+                p1 = cut2.Origin;
+                p2 = p1 + orientationPlane.XAxis * cellSize;
+                if (orientationPlane.Origin.DistanceTo(p2) > boxDim)
+                    lastPanel = true;
+            }
+            foreach (Mesh m in parts)
+                RhinoDoc.ActiveDoc.Objects.AddMesh(m);
+            return parts;
+        }
+        private List<Mesh> WallSplit3(OrientedBox orientedBox, Mesh mesh, List<Mesh> meshes)
+        {
+            
+            Plane orientationPlane = orientedBox.SideZmaxPlane;
+            
+            List<Mesh> parts = new List<Mesh>();
+            foreach (Mesh refmesh in meshes)
+            {
+                OrientedBox refBox = CaveTools.FindRefOrientedBox(orientationPlane, refmesh);
+                //OrientedBox.CheckPlane(refBox.SideXmaxPlane);
+                Mesh panel = CaveTools.splitTwoPlanes(refBox.SideXmaxPlane, refBox.SideXminPlane, mesh);
+                parts.Add(panel);
             }
             foreach (Mesh m in parts)
                 RhinoDoc.ActiveDoc.Objects.AddMesh(m);
