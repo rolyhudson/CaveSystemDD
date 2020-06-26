@@ -39,9 +39,6 @@ namespace CaveSystem2020
             pManager.AddNumberParameter("yCell", "y", "", GH_ParamAccess.item, 3000);
             pManager.AddNumberParameter("zCell", "z", "", GH_ParamAccess.item, 1000);
             pManager.AddLineParameter("grid", "g", "", GH_ParamAccess.list);
-            pManager.AddBrepParameter("roof", "r", "", GH_ParamAccess.list);
-            pManager.AddBrepParameter("walls", "w", "", GH_ParamAccess.list);
-            pManager.AddBrepParameter("floors", "f", "", GH_ParamAccess.list);
 
 
         }
@@ -53,18 +50,6 @@ namespace CaveSystem2020
         {
             pManager.AddMeshParameter("cave slices", "cs", "", GH_ParamAccess.tree);
             pManager.AddBrepParameter("bbox", "bb", "", GH_ParamAccess.tree);
-
-            pManager.AddGenericParameter("trim cells", "tc", "", GH_ParamAccess.tree);
-            pManager.AddGenericParameter("perimeter cells", "pc", "", GH_ParamAccess.tree);
-            pManager.AddGenericParameter("undefined cells", "udc", "", GH_ParamAccess.tree);
-
-
-            
-            pManager.AddMeshParameter("section boxes", "sb", "", GH_ParamAccess.tree);
-            pManager.AddCurveParameter("grid", "g", "", GH_ParamAccess.tree);
-            pManager.AddCurveParameter("links", "l", "", GH_ParamAccess.tree);
-
-            pManager.AddBrepParameter("boundaries", "b", "", GH_ParamAccess.tree);
             
         }
 
@@ -80,21 +65,14 @@ namespace CaveSystem2020
             double xcell = 0;
             double ycell = 0;
             double zcell = 0;
-            List<Brep> roofs = new List<Brep>();
-        List<Brep> walls = new List<Brep>();
-        List<Brep> floors = new List<Brep>();
 
-            
-
+           
             if (!DA.GetData(0, ref xcell)) return;
             if (!DA.GetData(1, ref ycell)) return;
             if (!DA.GetData(2, ref zcell)) return;
             if (!DA.GetDataList(3, bldGrid)) return;
-            if (!DA.GetDataList(4, roofs)) return;
-            if (!DA.GetDataList(5, walls)) return;
-            if (!DA.GetDataList(6, floors)) return;
 
-            Parameters parameters = new Parameters(xcell, ycell, zcell,roofs,walls, floors);
+            Parameters parameters = new Parameters(xcell, ycell, zcell);
             PartController pControl = new PartController( bldGrid, parameters);
 
             GH_Structure<GH_Mesh> caveSlices = new GH_Structure<GH_Mesh>();

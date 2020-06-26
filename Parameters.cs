@@ -12,7 +12,7 @@ namespace CaveSystem2020
         public double xCell;
         public double yCell;
         public double zCell;
-        public double cellMin = 500;
+        public double cellMin = 750;
         public double cellGap = 250;
         public double FramePlaneMesh = 300;
         public double FrameBridge = 100;
@@ -20,14 +20,11 @@ namespace CaveSystem2020
         public List<Brep> roofs = new List<Brep>();
         public List<Brep> walls = new List<Brep>();
         public List<Brep> floors = new List<Brep>();
-        public Parameters(double x, double y, double z, List<Brep> r, List<Brep> w, List<Brep> f)
+        public Parameters(double x, double y, double z)
         {
             xCell = x;
             yCell = y;
             zCell = z;
-            roofs = r;
-            walls = w;
-            floors = f;
         }
 
     }

@@ -30,12 +30,13 @@ namespace CaveSystem2020
 
             orientedBox = CaveTools.FindOrientedBox(bayPlane, imesh, parameters.yCell);
             //RhinoDoc.ActiveDoc.Objects.AddBrep(orientedBox.BoundingBox);
+
             orientationPlane = orientedBox.PlaneSelection(orientation);
             //OrientedBox.CheckPlane(orientationPlane);
             supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
 
             MeshToPanels();
-            supportAssembly.ConnectToEnvelope(panelFrames);
+            
         }
         private void MeshToPanels()
         {
@@ -87,8 +88,10 @@ namespace CaveSystem2020
                             
                             panel = FindPanelByArea(cut1, ref cut2, xPanel, ref panelArea);
                             OrientedBox panelBox = CaveTools.FindOrientedBox(BayXY, panel, parameters.yCell);
-                            xPanel = panelBox.xDim;
-                            //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
+                            xPanel = panelBox.zDim;
+                            if (orientation == Orientation.Ceiling)
+                                xPanel = panelBox.xDim;
+                                //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
                             updateLastFrame = true;
                         }
                         else
@@ -116,8 +119,7 @@ namespace CaveSystem2020
 
                 panelNum++;
             }
-            foreach (PanelFrame panelFrame in panelFrames)
-                panelFrame.CheckGeometry();
+            
         }
         private Mesh FindPanelByArea(Plane start,ref Plane end,double xdim, ref double area)
         {

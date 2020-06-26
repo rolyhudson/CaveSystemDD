@@ -16,13 +16,7 @@ namespace CaveSystem2020
         double ydim;
         Parameters parameters;
         public Mesh CavePanels;
-        //DummyMeshNodes
-        NurbsCurve boundaryMesh;
-        bool meshBoundarySet;
-        List<List<Point3d>> missingMeshNodeGrid = new List<List<Point3d>>();
 
-        int number;
-        int familyCount;
         public bool FailedFrame = false;
 
         List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
@@ -31,7 +25,7 @@ namespace CaveSystem2020
         public List<FrameMember> subFrame = new List<FrameMember>();
         public List<Line> frameLinesX = new List<Line>();
         public List<Line> frameLinesY = new List<Line>();
-        public List<Point3d> frameCorners = new List<Point3d>();
+        
         public List<Point3d> extraMeshNodes = new List<Point3d>();
         public List<Line> DummyGSALines = new List<Line>();
         
@@ -41,6 +35,7 @@ namespace CaveSystem2020
         public MeshExtraSupport meshExtraSupport = new MeshExtraSupport();
         public double panelArea = 0;
         bool ghostNodesFound =false;
+        public bool clashFixAttempted = false;
         public PanelFrame(Plane local, double panelXDim, Parameters param, Mesh p, int num, double panelYDim)
         {
             if (p == null)
@@ -58,7 +53,7 @@ namespace CaveSystem2020
             ydim = panelYDim;
             parameters = param;
             CavePanels = p;
-            number = num;
+
             //familyCount = groupNum;
             SetLocalPlane();
             //OrientedBox.CheckPlane(localPlane);
@@ -68,9 +63,9 @@ namespace CaveSystem2020
             FindMeshNodes();
             SetSubFrame();
             SetStubsFrameNodes();
-            
-            SetFrameLines(ref frameGrid, ref frameLinesX,ref frameLinesY);
-            if(ghostNodesFound)
+
+            SetFrameLines(ref frameGrid, ref frameLinesX, ref frameLinesY);
+            if (ghostNodesFound)
                 GetMissingMeshStubs();
             MakeGSAMesh();
             MakeDummyGSALines();
@@ -132,7 +127,83 @@ namespace CaveSystem2020
                 //CaveTools.CheckPoints(row);
             }
         }
-       
+        public void TrySnapGhosts()
+        {
+            clashFixAttempted = true;
+            for (int i = 0; i < meshnodes.Count; i++)
+            {
+                //skip middle row
+                if (meshnodes.Count == 3 && i == 1)
+                    continue;
+                for(int j = 0; j < meshnodes[i].Count; j++)
+                {
+                    if (meshnodes[i][j].isGhost)
+                    {
+                        Point3d closest = CaveTools.ClosestPoint(frameGrid[i][j], meshExtraSupport.Stubs.Select(x => x.From).ToList());
+                        Line frame = new Line();
+                        Vector3d test = frameGrid[i][j] - closest;
+                        
+                        foreach (Line line in frameLinesX)
+                        {
+                            // angle should be small a and dist on line
+                            double angle = Vector3d.VectorAngle(test, line.Direction);
+                            if (Math.Abs( angle- Math.PI) <0.05 || angle < 0.05)
+                            {
+                                Point3d ptOnLn = line.ClosestPoint(closest, true);
+                                
+                                if (frameGrid[i][j].DistanceTo(ptOnLn) < line.Length && closest.DistanceTo(ptOnLn) < 5)
+                                {
+                                    frame = line;
+                                    //update stub
+                                    Point3d meshpt = CaveTools.ClosestPoint(frameGrid[i][j], meshExtraSupport.Stubs.Select(x => x.To).ToList());
+                                    UpdateStubs(frameGrid[i][j], meshpt, ptOnLn);
+                                    //remove extra support
+                                    RemoveExtraSupport(closest);
+                                    frameGrid[i][j] = ptOnLn;
+                                    break;
+                                }
+                            }
+                            
+                        }
+                        
+                    }
+                }
+            }
+            //now re set frame
+            frameLinesX = new List<Line>();
+            frameLinesY = new List<Line>();
+            SetFrameLines(ref frameGrid, ref frameLinesX, ref frameLinesY);
+        }
+        private void UpdateStubs(Point3d oldframePt, Point3d meshpt, Point3d newframPt)
+        {
+            foreach(StubMember stubMember in cornerStub)
+            {
+                if (oldframePt.DistanceTo(stubMember.Stub.ClosestPoint(oldframePt, true)) < 5)
+                {
+                    stubMember.Update(meshpt, newframPt);
+                }
+            }
+            foreach (StubMember stubMember in internalStub)
+            {
+                if (oldframePt.DistanceTo(stubMember.Stub.ClosestPoint(oldframePt, true)) < 5)
+                {
+                    stubMember.Update(meshpt, newframPt);
+                }
+            }
+        }
+        private void RemoveExtraSupport(Point3d pt)
+        {
+            Line toRemove = new Line();
+            foreach(Line line in meshExtraSupport.Stubs)
+            {
+                if(pt.DistanceTo(line.ClosestPoint(pt,true))<5)
+                {
+                    toRemove = line;
+                   
+                }
+            }
+            meshExtraSupport.Stubs.Remove(toRemove);
+        }
         private void SetMeshNodes()
         {
             foreach (List<Point3d> pts in nodeGrid)
@@ -364,7 +435,7 @@ namespace CaveSystem2020
                             frame.Flip();
                         if(c ==1 && d ==1)
                             frame.Flip();
-                        linesC.Add(frame);
+                        linesD.Add(frame);
 
                     }
 
@@ -377,7 +448,7 @@ namespace CaveSystem2020
                             frame.Flip();
                         if (c == 1 && d == 1)
                             frame.Flip();
-                        linesD.Add(frame);
+                        linesC.Add(frame);
                     }
 
                 }
@@ -410,7 +481,95 @@ namespace CaveSystem2020
                 frameGrid.Add(pts);
             }
         }
-        
-       
+        public Brep subFrameBoundary()
+        {
+            List<Curve> curves = new List<Curve>();
+            if (internalStub.Count() == 2 && frameGrid.Count == 2)
+            {
+                curves = new List<Curve>()
+                {
+                    cornerStub[0].Stub.ToNurbsCurve(),
+                    internalStub[0].Stub.ToNurbsCurve(),
+                    cornerStub[1].Stub.ToNurbsCurve(),
+                   
+                    cornerStub[3].Stub.ToNurbsCurve(),
+                    internalStub[1].Stub.ToNurbsCurve(),
+                    cornerStub[2].Stub.ToNurbsCurve()
+                    
+                };
+            }
+            else if (internalStub.Count() == 2 && frameGrid.Count == 3)
+            {
+                curves = new List<Curve>()
+                {
+                    cornerStub[0].Stub.ToNurbsCurve(),
+                    
+                    cornerStub[1].Stub.ToNurbsCurve(),
+                    internalStub[1].Stub.ToNurbsCurve(),
+                    cornerStub[3].Stub.ToNurbsCurve(),
+                    
+                    cornerStub[2].Stub.ToNurbsCurve(),
+                    internalStub[0].Stub.ToNurbsCurve()
+                };
+            }
+            else
+            {
+                curves = new List<Curve>()
+                {
+                    cornerStub[0].Stub.ToNurbsCurve(),
+                    internalStub[0].Stub.ToNurbsCurve(),
+                    cornerStub[1].Stub.ToNurbsCurve(),
+                    internalStub[3].Stub.ToNurbsCurve(),
+                    cornerStub[3].Stub.ToNurbsCurve(),
+                    internalStub[4].Stub.ToNurbsCurve(),
+                    cornerStub[2].Stub.ToNurbsCurve(),
+                    internalStub[1].Stub.ToNurbsCurve()
+                };
+            }
+            
+            
+            Brep[] brep = Brep.CreateFromLoft(curves, Point3d.Unset, Point3d.Unset, LoftType.Straight, true);
+            ;
+            return MakeFrameBox(brep);
+        }
+        private Brep MakeFrameBox(Brep[] frame)
+        {
+            Mesh m = new Mesh();
+            Mesh f = new Mesh();
+            for (int i = 0; i < meshnodes.Count; i++)
+            {
+                for (int j = 0; j < meshnodes[i].Count; j++)
+                {
+                    if (i < meshnodes.Count - 1 && j < meshnodes[i].Count - 1)
+                    {
+                        List<Point3d> points = new List<Point3d>() { meshnodes[i][j].point, meshnodes[i][j + 1].point, meshnodes[i + 1][j + 1].point, meshnodes[i + 1][j].point };
+                        FourNodeMesh(ref m, points);
+
+                        List<Point3d> pointsF = new List<Point3d>() { frameGrid[i][j], frameGrid[i][j + 1], frameGrid[i + 1][j + 1], frameGrid[i + 1][j] };
+                        FourNodeMesh(ref f, pointsF);
+
+                    }
+                }
+            }
+            Brep front = Brep.CreateFromMesh(m,false);
+            Brep back = Brep.CreateFromMesh(f, false);
+            List<Brep> breps = new List<Brep>();
+            breps.Add(front);
+            breps.Add(back);
+            foreach (Brep b in frame)
+                breps.Add(b);
+            Brep[] box = Brep.JoinBreps(breps,RhinoDoc.ActiveDoc.ModelAbsoluteTolerance);
+
+            return box[0];
+        }
+        private void FourNodeMesh(ref Mesh mesh, List<Point3d> nodes)
+        {
+            //max for possible nodes in order
+            Mesh m = new Mesh();
+            m.Vertices.AddVertices(nodes);
+            m.Faces.AddFace(2, 0, 1);
+            m.Faces.AddFace(0, 2, 3);
+            mesh.Append(m);
+        }
     }
 }

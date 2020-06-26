@@ -100,10 +100,16 @@ namespace CaveSystem2020
             stubEnd = newend;
             setStub();
         }
+        public void Update(Point3d meshpt, Point3d framePt)
+        {
+            stubEnd = framePt - toPanel * stubTop;
+            
+            Stub = new Line(stubEnd, meshpt);
+        }
         private void setStub()
         {
             if (meshnode.isGhost)
-                Stub = new Line(frameGridNode, stubEnd);
+                Stub = new Line(stubEnd, frameGridNode);
             else
                 Stub = new Line(stubEnd, mesh1);
         }

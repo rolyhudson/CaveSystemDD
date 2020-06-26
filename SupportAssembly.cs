@@ -32,7 +32,7 @@ namespace CaveSystem2020
         }
         private void FindSupportGeo()
         {
-            string supportLayer = "COLUMNS_cls";
+            string supportLayer = "column_cls";
 
             if (orientation == Orientation.Ceiling)
                 supportLayer = "roof";
