@@ -20,6 +20,7 @@ namespace CaveSystem2020
         public List<Brep> roofs = new List<Brep>();
         public List<Brep> walls = new List<Brep>();
         public List<Brep> floors = new List<Brep>();
+        public List<NurbsCurve> problemPanels = new List<NurbsCurve>();
         public Parameters(double x, double y, double z)
         {
             xCell = x;

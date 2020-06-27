@@ -25,13 +25,14 @@ namespace CaveSystem2020
             
             mesh = imesh;
             BayXY = bayPlane;
-            if (mesh == null || mesh.DisjointMeshCount == 0)
+            if (mesh == null)
                 return;
 
             orientedBox = CaveTools.FindOrientedBox(bayPlane, imesh, parameters.yCell);
             //RhinoDoc.ActiveDoc.Objects.AddBrep(orientedBox.BoundingBox);
 
             orientationPlane = orientedBox.PlaneSelection(orientation);
+            
             //OrientedBox.CheckPlane(orientationPlane);
             supportAssembly = new SupportAssembly(parameters, orientation, orientationPlane);
 
@@ -66,13 +67,14 @@ namespace CaveSystem2020
             {
                 Plane cut1 = new Plane(p1, orientationPlane.XAxis);
                 Plane cut2 = new Plane(p2, orientationPlane.XAxis * -1);
-                Mesh panel = SelectClosestPanel(CaveTools.splitTwoPlanes(cut1, cut2, mesh), orientationPlane);
+                 
  
                 Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
                 //area check
                 double panelArea = 0;
-                panel = FindPanelByArea(cut1,ref cut2, xPanel, ref panelArea);
+                Mesh panel = FindPanelByArea(cut1,ref cut2, xPanel, ref panelArea);
                 bool updateLastFrame = false;
+                RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
                 if (lastPanel)
                 {
                     xPanel = boxDim - orientationPlane.Origin.DistanceTo(p1);
@@ -91,7 +93,7 @@ namespace CaveSystem2020
                             xPanel = panelBox.zDim;
                             if (orientation == Orientation.Ceiling)
                                 xPanel = panelBox.xDim;
-                                //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
+                                //
                             updateLastFrame = true;
                         }
                         else

@@ -42,6 +42,7 @@ namespace CaveSystem2020
             "SUB FRAME STUB LENGTH COMPLIANCE FAIL",
             "DUMMY GSA LINES",
             "WALL DIAGONAL",
+            "PROBLEM PANELS"
 
         };
         List<Color> layerColors = new List<Color>()
@@ -69,6 +70,7 @@ namespace CaveSystem2020
             Color.FromArgb( 229,34,145),
             Color.FromArgb( 255,0,218),
             Color.Crimson,
+            Color.Firebrick
         };
         public Documenter()
         {
@@ -98,6 +100,10 @@ namespace CaveSystem2020
         }
         public void WritePart3d(PartController partController, Parameters parameters, string filePath)
         {
+            foreach(NurbsCurve nurbsCurve in parameters.problemPanels)
+            {
+                AddCurve(nurbsCurve, "PROBLEM PANELS");
+            }
             foreach(BayController bayController in partController.bayControllers)
             {
                 foreach(CaveElement caveElement in bayController.caveElements)
@@ -170,6 +176,11 @@ namespace CaveSystem2020
             if (layer == "CAVE PANELS")
                 oa.ObjectColor = CaveTools.getRandomColour();
             file.Objects.AddMesh(mesh, oa);
+        }
+        private void AddCurve(Curve curve, string layer)
+        {
+            ObjectAttributes oa = layerAttributes[layer];
+            file.Objects.AddCurve(curve, oa);
         }
         private void AddLines(List<Line> lines, string layer)
         {

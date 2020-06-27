@@ -20,7 +20,7 @@ namespace CaveSystem2020
         public bool FailedFrame = false;
 
         List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
-        List<List<Point3d>> frameGrid = new List<List<Point3d>>();
+        public List<List<Point3d>> frameGrid = new List<List<Point3d>>();
         public List<StubMember> internalStub  = new List<StubMember>();
         public List<FrameMember> subFrame = new List<FrameMember>();
         public List<Line> frameLinesX = new List<Line>();
@@ -104,7 +104,7 @@ namespace CaveSystem2020
             List<Line> allframes = new List<Line>();
             allframes.AddRange(frameLinesX);
             allframes.AddRange(frameLinesY);
-            meshExtraSupport.SetExtraSupport(localPlane, CavePanels, planarGrid,nodeGrid, allframes, parameters);
+            meshExtraSupport.SetExtraSupport(this, planarGrid,meshnodes,allframes, parameters);
         }
         private void SetPointGrid()
         {
@@ -127,83 +127,9 @@ namespace CaveSystem2020
                 //CaveTools.CheckPoints(row);
             }
         }
-        public void TrySnapGhosts()
-        {
-            clashFixAttempted = true;
-            for (int i = 0; i < meshnodes.Count; i++)
-            {
-                //skip middle row
-                if (meshnodes.Count == 3 && i == 1)
-                    continue;
-                for(int j = 0; j < meshnodes[i].Count; j++)
-                {
-                    if (meshnodes[i][j].isGhost)
-                    {
-                        Point3d closest = CaveTools.ClosestPoint(frameGrid[i][j], meshExtraSupport.Stubs.Select(x => x.From).ToList());
-                        Line frame = new Line();
-                        Vector3d test = frameGrid[i][j] - closest;
-                        
-                        foreach (Line line in frameLinesX)
-                        {
-                            // angle should be small a and dist on line
-                            double angle = Vector3d.VectorAngle(test, line.Direction);
-                            if (Math.Abs( angle- Math.PI) <0.05 || angle < 0.05)
-                            {
-                                Point3d ptOnLn = line.ClosestPoint(closest, true);
-                                
-                                if (frameGrid[i][j].DistanceTo(ptOnLn) < line.Length && closest.DistanceTo(ptOnLn) < 5)
-                                {
-                                    frame = line;
-                                    //update stub
-                                    Point3d meshpt = CaveTools.ClosestPoint(frameGrid[i][j], meshExtraSupport.Stubs.Select(x => x.To).ToList());
-                                    UpdateStubs(frameGrid[i][j], meshpt, ptOnLn);
-                                    //remove extra support
-                                    RemoveExtraSupport(closest);
-                                    frameGrid[i][j] = ptOnLn;
-                                    break;
-                                }
-                            }
-                            
-                        }
-                        
-                    }
-                }
-            }
-            //now re set frame
-            frameLinesX = new List<Line>();
-            frameLinesY = new List<Line>();
-            SetFrameLines(ref frameGrid, ref frameLinesX, ref frameLinesY);
-        }
-        private void UpdateStubs(Point3d oldframePt, Point3d meshpt, Point3d newframPt)
-        {
-            foreach(StubMember stubMember in cornerStub)
-            {
-                if (oldframePt.DistanceTo(stubMember.Stub.ClosestPoint(oldframePt, true)) < 5)
-                {
-                    stubMember.Update(meshpt, newframPt);
-                }
-            }
-            foreach (StubMember stubMember in internalStub)
-            {
-                if (oldframePt.DistanceTo(stubMember.Stub.ClosestPoint(oldframePt, true)) < 5)
-                {
-                    stubMember.Update(meshpt, newframPt);
-                }
-            }
-        }
-        private void RemoveExtraSupport(Point3d pt)
-        {
-            Line toRemove = new Line();
-            foreach(Line line in meshExtraSupport.Stubs)
-            {
-                if(pt.DistanceTo(line.ClosestPoint(pt,true))<5)
-                {
-                    toRemove = line;
-                   
-                }
-            }
-            meshExtraSupport.Stubs.Remove(toRemove);
-        }
+        
+        
+        
         private void SetMeshNodes()
         {
             foreach (List<Point3d> pts in nodeGrid)
@@ -217,6 +143,7 @@ namespace CaveSystem2020
         
         private void FindMeshNodes()
         {
+            NurbsCurve boundary = CaveTools.GetPlanarPanelBoundary(this);
             for (int c = 0; c < nodeGrid.Count; c++)
             {
                 List<Curve> row = new List<Curve>();
@@ -228,6 +155,17 @@ namespace CaveSystem2020
                     {
                         meshnodes[c][d].point = ray.PointAt(t);
                         meshnodes[c][d].pointset = true;
+                        //is it too close to edge
+                        double p = 0;
+                        boundary.ClosestPoint(nodeGrid[c][d], out p);
+                        Point3d boundaryPt = boundary.PointAt(p);
+                        double dist = nodeGrid[c][d].DistanceTo(boundaryPt);
+                        if (dist < parameters.cellGap / 2 - 5)
+                        {
+                            ghostNodesFound = true;
+                            meshnodes[c][d].isGhost = true;
+                        }
+                            
                     }
                     else
                     {
@@ -359,7 +297,7 @@ namespace CaveSystem2020
                 List<Point3d> ptsPlane = new List<Point3d>();
                 foreach (MeshNode mn in nodes)
                     ptsPlane.Add(localPlane.ClosestPoint(mn.point));
-                
+                //close polyline
                 ptsPlane.Add(localPlane.ClosestPoint(nodes[0].point));
                 Polyline pl = new Polyline(ptsPlane);
                 
@@ -418,7 +356,7 @@ namespace CaveSystem2020
             }
             
         }
-        private void SetFrameLines(ref List<List<Point3d>> points,ref List<Line> linesC, ref List<Line> linesD)
+        public void SetFrameLines(ref List<List<Point3d>> points,ref List<Line> linesC, ref List<Line> linesD)
         {
             for (int c = 0; c < nodeGrid.Count; c++)
             {
@@ -484,7 +422,21 @@ namespace CaveSystem2020
         public Brep subFrameBoundary()
         {
             List<Curve> curves = new List<Curve>();
-            if (internalStub.Count() == 2 && frameGrid.Count == 2)
+            if (internalStub.Count() == 0)
+            {
+                curves = new List<Curve>()
+                {
+                    cornerStub[0].Stub.ToNurbsCurve(),
+
+                    cornerStub[1].Stub.ToNurbsCurve(),
+
+                    cornerStub[3].Stub.ToNurbsCurve(),
+
+                    cornerStub[2].Stub.ToNurbsCurve()
+
+                };
+            }
+            else if (internalStub.Count() == 2 && frameGrid.Count == 2)
             {
                 curves = new List<Curve>()
                 {
@@ -512,6 +464,7 @@ namespace CaveSystem2020
                     internalStub[0].Stub.ToNurbsCurve()
                 };
             }
+            
             else
             {
                 curves = new List<Curve>()

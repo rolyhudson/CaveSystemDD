@@ -294,6 +294,34 @@ namespace CaveSystem2020
             }
             return closest;
         }
+        public static NurbsCurve GetPlanarPanelBoundary(PanelFrame panelFrame)
+        {
+            Polyline[] outlines = panelFrame.CavePanels.GetOutlines(panelFrame.localPlane);
+            if (outlines == null || outlines.Length == 0)
+                return null;
+            int reduct = outlines[0].ReduceSegments(4);
+
+            NurbsCurve boundary = NurbsCurve.Create(false, 1, outlines[0]);
+            return boundary;
+        }
+        public static Curve OffsetBoundary(PanelFrame panelFrame, double dist)
+        {
+            //panelFrame.parameters.cellGap / 2.0 - 1
+            NurbsCurve boundary = GetPlanarPanelBoundary(panelFrame);
+            AreaMassProperties amp = AreaMassProperties.Compute(boundary);
+            //RhinoDoc.ActiveDoc.Objects.AddCurve(boundary);
+            Curve[] offsets = boundary.Offset(CaveTools.averagePoint(boundary.Points.Select(x => x.Location).ToList()), panelFrame.localPlane.Normal, dist, 5, CurveOffsetCornerStyle.Sharp);
+            //if (offsets != null && offsets.Length >= 1)
+
+            AreaMassProperties amp2 = AreaMassProperties.Compute(offsets[0]);
+            if (amp2 == null || amp2.Area > amp.Area )
+                offsets = boundary.Offset(CaveTools.averagePoint(boundary.Points.Select(x => x.Location).ToList()), panelFrame.localPlane.Normal, -(dist), 5, CurveOffsetCornerStyle.Sharp);
+            amp2 = AreaMassProperties.Compute(offsets[0]);
+            if (amp2 == null || amp2.Area < 10000)
+                offsets = boundary.Offset(panelFrame.localPlane, -(dist), 5, CurveOffsetCornerStyle.Sharp);
+            if (offsets == null) return null;
+            return offsets[0];
+        }
         public static void CheckPoints(List<Point3d> points)
         {
             foreach (Point3d p in points)

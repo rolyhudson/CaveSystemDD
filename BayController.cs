@@ -89,8 +89,11 @@ namespace CaveSystem2020
         }
         private void CheckPanelGeometry()
         {
+            
             foreach(CaveElement caveElement in caveElements)
             {
+                if (caveElement.supportAssembly == null)
+                    continue;
                 caveElement.supportAssembly.ConnectToEnvelope(caveElement.panelFrames);
                 foreach (PanelFrame panelFrame in caveElement.panelFrames)
                 {
