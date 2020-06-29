@@ -42,7 +42,9 @@ namespace CaveSystem2020
             "SUB FRAME STUB LENGTH COMPLIANCE FAIL",
             "DUMMY GSA LINES",
             "WALL DIAGONAL",
-            "PROBLEM PANELS"
+            "PROBLEM PANELS",
+            "STALACTITE SUPPORT FRAME",
+            "STALACTITE SUPPORT VERTICAL"
 
         };
         List<Color> layerColors = new List<Color>()
@@ -70,7 +72,9 @@ namespace CaveSystem2020
             Color.FromArgb( 229,34,145),
             Color.FromArgb( 255,0,218),
             Color.Crimson,
-            Color.Firebrick
+            Color.DarkCyan,
+            Color.GreenYellow,
+            Color.LightSeaGreen,
         };
         public Documenter()
         {
@@ -168,6 +172,11 @@ namespace CaveSystem2020
                     AddStubLine(stubMember, cornerStubLayer);
 
                 AddLines(panelFrame.meshExtraSupport.Stubs, extraInternalStubLayer);
+
+                AddLines(panelFrame.stalactiteSubFrame, "STALACTITE SUPPORT FRAME");
+                AddLines(panelFrame.stalactiteVertical, "STALACTITE SUPPORT VERTICAL");
+                
+            
             }
         }
         private void AddMesh(Mesh mesh, string layer)

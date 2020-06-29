@@ -18,14 +18,18 @@ namespace CaveSystem2020
         public Mesh CavePanels;
 
         public bool FailedFrame = false;
-
-        List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
+        List<Point3d> boundaryCorners = new List<Point3d>();
+        public NurbsCurve UnitBoundary;
+        public List<List<Point3d>> nodeGrid = new List<List<Point3d>>();
         public List<List<Point3d>> frameGrid = new List<List<Point3d>>();
         public List<StubMember> internalStub  = new List<StubMember>();
         public List<FrameMember> subFrame = new List<FrameMember>();
         public List<Line> frameLinesX = new List<Line>();
         public List<Line> frameLinesY = new List<Line>();
-        
+
+        public List<Line> stalactiteVertical = new List<Line>();
+        public List<Line> stalactiteSubFrame = new List<Line>();
+
         public List<Point3d> extraMeshNodes = new List<Point3d>();
         public List<Line> DummyGSALines = new List<Line>();
         
@@ -53,7 +57,7 @@ namespace CaveSystem2020
             ydim = panelYDim;
             parameters = param;
             CavePanels = p;
-
+            SetUnitBoundary();
             //familyCount = groupNum;
             SetLocalPlane();
             //OrientedBox.CheckPlane(localPlane);
@@ -70,6 +74,16 @@ namespace CaveSystem2020
             MakeGSAMesh();
             MakeDummyGSALines();
             
+        }
+        private void SetUnitBoundary()
+        {
+            boundaryCorners.Add(refPlane.Origin);
+            boundaryCorners.Add(refPlane.PointAt(xdim, 0));
+            boundaryCorners.Add(refPlane.PointAt(xdim, ydim));
+            boundaryCorners.Add(refPlane.PointAt(0,ydim));
+            boundaryCorners.Add(refPlane.Origin);
+            UnitBoundary = NurbsCurve.Create(false, 1, boundaryCorners);
+            RhinoDoc.ActiveDoc.Objects.AddCurve(UnitBoundary);
         }
         private void SetPanelArea()
         {
@@ -127,9 +141,6 @@ namespace CaveSystem2020
                 //CaveTools.CheckPoints(row);
             }
         }
-        
-        
-        
         private void SetMeshNodes()
         {
             foreach (List<Point3d> pts in nodeGrid)
@@ -140,7 +151,6 @@ namespace CaveSystem2020
                 meshnodes.Add(nodes);
             }
         }
-        
         private void FindMeshNodes()
         {
             NurbsCurve boundary = CaveTools.GetPlanarPanelBoundary(this);

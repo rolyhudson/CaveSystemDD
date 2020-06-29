@@ -16,6 +16,7 @@ namespace CaveSystem2020
         
         public List<Brep> brepBBoxes = new List<Brep>();
         public Parameters parameters;
+        StalactiteHangers stalactiteHangers;
         //public Text3d sectionNum;
         Plane gridPlane;
 
@@ -24,7 +25,7 @@ namespace CaveSystem2020
             parameters = prms;
             grid = gridLines;
 
-            //setText(parameters.partNumber);
+            stalactiteHangers = new StalactiteHangers();
             SetBays();
         }
         private void SetBays()
@@ -39,7 +40,7 @@ namespace CaveSystem2020
         }
         private void SetBay()
         {
-            bayControllers.Add(new BayController(gridPlane, parameters));
+            bayControllers.Add(new BayController(gridPlane, parameters,stalactiteHangers));
         }
 
         private void Slice()

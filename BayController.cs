@@ -17,16 +17,28 @@ namespace CaveSystem2020
         public OrientedBox bayBoundary;
         public Plane ReferencePlane;
         Parameters parameters;
+        StalactiteHangers stalactiteHangers;
 
-        public BayController(Plane iplane, Parameters iparameters)
+        public BayController(Plane iplane, Parameters iparameters, StalactiteHangers hangers)
         {
             //slice = mesh;
             //bayBoundary = obox;
             ReferencePlane = iplane;
             parameters = iparameters;
+            stalactiteHangers = hangers;
             SliceElements();
             ClashFix clashFix = new ClashFix(caveElements);
             CheckPanelGeometry();
+            setStalactites();
+        }
+        private void setStalactites()
+        {
+            foreach(CaveElement caveElement in caveElements)
+            {
+                if(caveElement.orientation == Orientation.Ceiling)
+                    stalactiteHangers.AddStalactiteSupport(caveElement);
+            }
+                
         }
         private void SliceElements()
         {
@@ -83,6 +95,7 @@ namespace CaveSystem2020
                 {
 
                     CaveElement element = new CaveElement(m, ReferencePlane, orientation, parameters);
+                    
                     caveElements.Add(element);
                 }
             }
@@ -102,7 +115,7 @@ namespace CaveSystem2020
                 }
             }
         }
-        private List<Mesh> SelectMeshes(string layerName, Plane plane)
+        public List<Mesh> SelectMeshes(string layerName, Plane plane)
         {
             RhinoObject[] objs = RhinoDoc.ActiveDoc.Objects.FindByLayer(layerName );
             if (objs == null)

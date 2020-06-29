@@ -1,4 +1,5 @@
 ﻿using Rhino;
+using Rhino.DocObjects;
 using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
@@ -68,13 +69,23 @@ namespace CaveSystem2020
             else
                 return false;
         }
-        private static bool pointsInsidePlane(List<Point3d> pts, Plane pln)
+        public static bool pointsInsidePlane(List<Point3d> pts, Plane pln)
         {
             foreach (Point3d p in pts)
             {
                 if (!pointInsidePlane(p, pln)) return false;
             }
             return true;
+        }
+        public static List<Point3d> PointsInsidePlane(List<Point3d> pts, Plane pln1, Plane pln2)
+        {
+            List<Point3d> inside = new List<Point3d>();
+            foreach (Point3d p in pts)
+            {
+                if (pointInsidePlane(p, pln1) && pointInsidePlane(p, pln2))
+                    inside.Add(p);
+            }
+            return inside;
         }
         public static bool pointInsidePlane(Point3d p, Plane pln)
         {
@@ -322,6 +333,7 @@ namespace CaveSystem2020
             if (offsets == null) return null;
             return offsets[0];
         }
+        
         public static void CheckPoints(List<Point3d> points)
         {
             foreach (Point3d p in points)

@@ -16,7 +16,7 @@ namespace CaveSystem2020
         OrientedBox orientedBox;
         Plane orientationPlane;
         public Orientation orientation;
-        Plane BayXY = new Plane();
+        public Plane BayXY = new Plane();
         Mesh mesh;
         public CaveElement(Mesh imesh, Plane bayPlane,Orientation iorientation, Parameters iparameters)
         {
