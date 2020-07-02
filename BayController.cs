@@ -81,6 +81,8 @@ namespace CaveSystem2020
                     List<Mesh> splits = new List<Mesh>();
                     foreach (Mesh m in meshes)
                     {
+                        if (m.Faces.Count == 0)
+                            continue;
                         List<Mesh> refFrags = SelectMeshes("columnRef", ReferencePlane);
                         Mesh refMesh = new Mesh();
                         refMesh.Append(m);

@@ -144,12 +144,26 @@ namespace CaveSystem2020
                     panelFrame.SetFrameLines(ref panelFrame.nodeGrid, ref frameLinesX, ref frameLinesY);
                     Dictionary<Point3d, double> pointDist = new Dictionary<Point3d, double>();
                     double t = 0;
+                    bool shiftStalac = false;
                     foreach(Line frame  in frameLinesY)
                     {
                         Rhino.Geometry.Intersect.Intersection.LinePlane(frame, pln, out t);
                         if(t >= 0 && t <=1)
                         {
+
                             Point3d interPt = frame.PointAt(t);
+                            if (interPt.DistanceTo(frame.To) < 300)
+                            {
+                                shiftStalac = true;
+                                interPt = frame.To;
+                            }
+                                
+                            if (interPt.DistanceTo(frame.From) < 300)
+                            {
+                                shiftStalac = true;
+                                interPt = frame.From;
+                            }
+
                             pointDist.Add(interPt, interPt.DistanceTo(planePt));
                         }
                         
@@ -203,6 +217,8 @@ namespace CaveSystem2020
                     else
                     {
                         Line sFrame = new Line(Start, End);
+                        //if(shiftStalac)
+
                         Line vLine = new Line(p, panelFrame.localPlane.ZAxis * 100000);
                         bool inter3 = Rhino.Geometry.Intersect.Intersection.LineLine(vLine, sFrame, out p1, out p2);
 

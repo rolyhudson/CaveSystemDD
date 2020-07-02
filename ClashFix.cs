@@ -126,22 +126,65 @@ namespace CaveSystem2020
             panelFrame.frameLinesY = new List<Line>();
             panelFrame.SetFrameLines(ref panelFrame.frameGrid, ref panelFrame.frameLinesX, ref panelFrame.frameLinesY);
         }
+       
         private void FrameGridToExtraSupportPos(PanelFrame panelFrame,Line frameline,int i, int j, Point3d closestExtra)
         {
+            Point3d start = panelFrame.localPlane.ClosestPoint(frameline.From);
+            Point3d end = panelFrame.localPlane.ClosestPoint(frameline.To);
+            Point3d endToMove = new Point3d(start);
+            Point3d endFixed = new Point3d(end);
+            if (panelFrame.frameGrid[i][j].DistanceTo(end)< panelFrame.frameGrid[i][j].DistanceTo(start))
+            {
+                endToMove = new Point3d(end);
+                endFixed = new Point3d(start);
+            }
+            Point3d extra = panelFrame.localPlane.ClosestPoint(closestExtra);
+            Point3d ptOnLn = new Point3d();
+            if (extra.DistanceTo(endFixed) < 500)
+            {
+                //move to frame 500mmm
+                Vector3d move = endToMove - endFixed;
+                move.Unitize();
+                endToMove = endFixed + move * 500;
+                Line drop = new Line(endToMove, panelFrame.localPlane.ZAxis * 10000);
+                double a = 0;
+                double b = 0;
+                Rhino.Geometry.Intersect.Intersection.LineLine(frameline, drop, out a, out b);
+                ptOnLn = frameline.PointAt(a);
+                UpdateStubs(panelFrame, panelFrame.frameGrid[i][j], ptOnLn, ptOnLn);
+            }
+            else
+            {
+                //move to closest extra
+                ptOnLn = frameline.ClosestPoint(closestExtra, true);
+                Point3d meshpt = CaveTools.ClosestPoint(panelFrame.frameGrid[i][j], panelFrame.meshExtraSupport.Stubs.Select(x => x.To).ToList());
+                UpdateStubs(panelFrame, panelFrame.frameGrid[i][j], meshpt, ptOnLn);
+                //remove extra support
+                RemoveExtraSupport(panelFrame, closestExtra);
+            }
             
-            Point3d ptOnLn = frameline.ClosestPoint(closestExtra, true);
-            Point3d meshpt = CaveTools.ClosestPoint(panelFrame.frameGrid[i][j], panelFrame.meshExtraSupport.Stubs.Select(x => x.To).ToList());
-            UpdateStubs(panelFrame, panelFrame.frameGrid[i][j], meshpt, ptOnLn);
-            //remove extra support
-            RemoveExtraSupport(panelFrame, closestExtra);
             panelFrame.frameGrid[i][j] = ptOnLn;
         }
         private void FrameGridToLineCentre(PanelFrame panelFrame, Line frameline, int i, int j)
         {
-            Point3d ptOnLn = frameline.PointAt(0.5);
+            Point3d start = panelFrame.localPlane.ClosestPoint(frameline.From);
+            Point3d end = panelFrame.localPlane.ClosestPoint(frameline.To);
+            
+            Point3d endToMove = new Point3d(start);
+            Point3d endFixed = new Point3d(end);
+            if (panelFrame.frameGrid[i][j].DistanceTo(end) < panelFrame.frameGrid[i][j].DistanceTo(start))
+            {
+                endToMove = new Point3d(end);
+                endFixed = new Point3d(start);
+            }
+            Vector3d move = endToMove - endFixed;
+            move.Unitize();
+            Point3d ptOnLn = endFixed + move * 500;
+            
             UpdateStubs(panelFrame, panelFrame.frameGrid[i][j], ptOnLn, ptOnLn);
             panelFrame.frameGrid[i][j] = ptOnLn;
         }
+       
         private void RemoveExtraSupport(PanelFrame panelFrame, Point3d pt)
         {
             Line toRemove = new Line();

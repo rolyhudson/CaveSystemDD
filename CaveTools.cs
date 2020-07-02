@@ -281,7 +281,7 @@ namespace CaveSystem2020
                 Rhino.Geometry.Intersect.Intersection.LinePlane(testLine, testPlane, out t);
                 if (t < 0) continue;
                 Point3d planePt = testLine.PointAt(t);
-                if (t < tMin && planePt.DistanceTo(temp) < 300 && planePt.DistanceTo(testPoint) < 3000)
+                if (t < tMin && planePt.DistanceTo(temp) < 300 && planePt.DistanceTo(testPoint) < 4000)
                 {
                     tMin = t;
                     

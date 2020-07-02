@@ -61,8 +61,8 @@ namespace CaveSystem2020
             if (orientation == Orientation.SideWest || orientation == Orientation.SideEast)
                 yPanel = orientedBox.xDim;
             bool lastPanel = false;
-            double lastPanelX = 2000;
-            
+           
+            Mesh panel = new Mesh();
             while (cumulativeDim < boxDim)
             {
                 Plane cut1 = new Plane(p1, orientationPlane.XAxis);
@@ -72,11 +72,13 @@ namespace CaveSystem2020
                 Plane local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
                 //area check
                 double panelArea = 0;
-                Mesh panel = FindPanelByArea(cut1,ref cut2, xPanel, ref panelArea);
-                bool updateLastFrame = false;
-                RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
+
+                panel = FindPanelByArea(cut1, ref cut2, xPanel, ref panelArea);
+                //RhinoDoc.ActiveDoc.Objects.AddMesh(panel);
                 if (lastPanel)
                 {
+                    AreaMassProperties amp = AreaMassProperties.Compute(panel);
+                    panelArea = amp.Area;
                     xPanel = boxDim - orientationPlane.Origin.DistanceTo(p1);
                     if (xPanel < parameters.cellMin)
                     {
@@ -93,22 +95,36 @@ namespace CaveSystem2020
                             xPanel = panelBox.zDim;
                             if (orientation == Orientation.Ceiling)
                                 xPanel = panelBox.xDim;
-                                //
-                            updateLastFrame = true;
+                            //
+                            panelFrames.RemoveAt(panelNum - 1);
+                            
                         }
                         else
-                            lastPanelX = parameters.cellMin;
+                        {
+                            //split last two panels equally
+                            xPanel = (panelFrames[panelNum - 1].xdim + xPanel) / 2;
+
+                            p1 = panelFrames[panelNum - 1].refPlane.Origin;
+                            local = new Plane(p1, orientationPlane.XAxis, orientationPlane.YAxis);
+                            cut1 = new Plane(p1, orientationPlane.XAxis);
+                            p2 = p1 + orientationPlane.XAxis * xPanel;
+                            cut2 = new Plane(p2, orientationPlane.XAxis * -1);
+                            panel = SelectClosestPanel(CaveTools.splitTwoPlanes(cut1, cut2, mesh), orientationPlane);
+                            cumulativeDim -= panelFrames[panelNum - 1].xdim;
+                            panelFrames.RemoveAt(panelNum - 1);
+                            lastPanel = false;
+                        }
+                            
                     }
                 }
                 else
                 {
+
                     xPanel = cut1.Origin.DistanceTo(cut2.Origin);
                 }
                 
+
                 cumulativeDim += xPanel;
-                if (updateLastFrame)
-                    panelFrames.RemoveAt(panelNum - 1);
-                
                     
                 panelFrames.Add(new PanelFrame(local, xPanel, parameters, panel, panelNum, yPanel));
                 if (lastPanel)
@@ -116,7 +132,7 @@ namespace CaveSystem2020
                 //set p1 and p2 for next panel
                 p1 = cut2.Origin;
                 p2 = p1 + orientationPlane.XAxis * cellSize;
-                if (orientationPlane.Origin.DistanceTo(p2) > boxDim)
+                if (orientationPlane.Origin.DistanceTo(p2) >= boxDim)
                     lastPanel = true;
 
                 panelNum++;
