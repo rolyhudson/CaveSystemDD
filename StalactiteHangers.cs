@@ -145,7 +145,8 @@ namespace CaveSystem2020
                     Dictionary<Point3d, double> pointDist = new Dictionary<Point3d, double>();
                     double t = 0;
                     bool shiftStalac = false;
-                    foreach(Line frame  in frameLinesY)
+                    Vector3d shift = new Vector3d();
+                    foreach (Line frame  in frameLinesY)
                     {
                         Rhino.Geometry.Intersect.Intersection.LinePlane(frame, pln, out t);
                         if(t >= 0 && t <=1)
@@ -154,20 +155,29 @@ namespace CaveSystem2020
                             Point3d interPt = frame.PointAt(t);
                             if (interPt.DistanceTo(frame.To) < 300)
                             {
-                                shiftStalac = true;
+                                shift = frame.To - interPt;
                                 interPt = frame.To;
+                                shiftStalac = true;
                             }
-                                
+
                             if (interPt.DistanceTo(frame.From) < 300)
                             {
-                                shiftStalac = true;
+                                shift = frame.From - interPt;
                                 interPt = frame.From;
+                                shiftStalac = true;
                             }
 
                             pointDist.Add(interPt, interPt.DistanceTo(planePt));
                         }
                         
                     }
+                    if (shiftStalac)
+                    {
+                        //move the point
+                        Transform xform = Transform.Translation(shift);
+                        p.Transform(xform);
+                    }
+
                     if (pointDist.Count < 2)
                     {
                         Line vertical = new Line(p, planePt);
@@ -187,6 +197,7 @@ namespace CaveSystem2020
                     Point3d End = new Point3d();
                     double p1 = 0;
                     double p2 = 0;
+                    
                     foreach (Line frame in panelFrame.frameLinesY)
                     {
                         bool inter1 = Rhino.Geometry.Intersect.Intersection.LineLine(startLine, frame, out p1, out p2);
@@ -194,7 +205,7 @@ namespace CaveSystem2020
                         {
                             if(p2>=0&& p2<=1 && p1 >= 0 && p1 <= 1)
                                 Start = frame.PointAt(p2);
-                            
+                           
                         }
                         
                     }
@@ -208,7 +219,7 @@ namespace CaveSystem2020
                             
                         }
                     }
-                    if(End.Z ==0 || Start.Z == 0)
+                    if(End.Z == 0 || Start.Z == 0)
                     {
                         Line vertical = new Line(p, planePt);
                         panelFrame.stalactiteVertical.Add(vertical);
@@ -217,17 +228,16 @@ namespace CaveSystem2020
                     else
                     {
                         Line sFrame = new Line(Start, End);
-                        //if(shiftStalac)
-
                         Line vLine = new Line(p, panelFrame.localPlane.ZAxis * 100000);
                         bool inter3 = Rhino.Geometry.Intersect.Intersection.LineLine(vLine, sFrame, out p1, out p2);
-
-
                         Line vertical = new Line(p, sFrame.PointAt(p2));
-                        panelFrame.stalactiteSubFrame.Add(sFrame);
+                        if (!shiftStalac)
+                        {
+                            panelFrame.stalactiteSubFrame.Add(sFrame);
+                            RhinoDoc.ActiveDoc.Objects.AddLine(sFrame);
+                        }
                         panelFrame.stalactiteVertical.Add(vertical);
                         RhinoDoc.ActiveDoc.Objects.AddLine(vertical);
-                        RhinoDoc.ActiveDoc.Objects.AddLine(sFrame);
                     }
                     
                     

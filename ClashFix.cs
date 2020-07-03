@@ -169,17 +169,25 @@ namespace CaveSystem2020
         {
             Point3d start = panelFrame.localPlane.ClosestPoint(frameline.From);
             Point3d end = panelFrame.localPlane.ClosestPoint(frameline.To);
-            
+            Point3d planePt = panelFrame.localPlane.ClosestPoint(panelFrame.frameGrid[i][j]);
             Point3d endToMove = new Point3d(start);
             Point3d endFixed = new Point3d(end);
-            if (panelFrame.frameGrid[i][j].DistanceTo(end) < panelFrame.frameGrid[i][j].DistanceTo(start))
+            if (planePt.DistanceTo(end) < planePt.DistanceTo(start))
             {
                 endToMove = new Point3d(end);
                 endFixed = new Point3d(start);
             }
+            Point3d ptOnLn = new Point3d();
             Vector3d move = endToMove - endFixed;
             move.Unitize();
-            Point3d ptOnLn = endFixed + move * 500;
+            //500 mm from fixed end
+            endToMove = endFixed + move * 500;
+            Line drop = new Line(endToMove, panelFrame.localPlane.ZAxis * 10000);
+            
+            double a = 0;
+            double b = 0;
+            Rhino.Geometry.Intersect.Intersection.LineLine(frameline, drop, out a, out b);
+            ptOnLn = frameline.PointAt(a);
             
             UpdateStubs(panelFrame, panelFrame.frameGrid[i][j], ptOnLn, ptOnLn);
             panelFrame.frameGrid[i][j] = ptOnLn;

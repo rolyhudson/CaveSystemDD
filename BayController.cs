@@ -95,7 +95,7 @@ namespace CaveSystem2020
                 
                 foreach (Mesh m in meshes)
                 {
-
+                    if (m.Faces.Count == 0) continue;
                     CaveElement element = new CaveElement(m, ReferencePlane, orientation, parameters);
                     
                     caveElements.Add(element);
@@ -131,7 +131,8 @@ namespace CaveSystem2020
                 {
                     Mesh m = obj.Geometry as Mesh;
                     if (CaveTools.MeshInsidePlanes(pln1, pln2, m))
-                        contained.Add(m);
+                        if (m.IsValid)
+                            contained.Add(m);
                 }
             }
             

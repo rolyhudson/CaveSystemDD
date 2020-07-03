@@ -320,9 +320,12 @@ namespace CaveSystem2020
             //panelFrame.parameters.cellGap / 2.0 - 1
             NurbsCurve boundary = GetPlanarPanelBoundary(panelFrame);
             AreaMassProperties amp = AreaMassProperties.Compute(boundary);
+            if (amp == null)
+                return null;
             //RhinoDoc.ActiveDoc.Objects.AddCurve(boundary);
             Curve[] offsets = boundary.Offset(CaveTools.averagePoint(boundary.Points.Select(x => x.Location).ToList()), panelFrame.localPlane.Normal, dist, 5, CurveOffsetCornerStyle.Sharp);
-            //if (offsets != null && offsets.Length >= 1)
+            if (offsets == null)
+                offsets = boundary.Offset(CaveTools.averagePoint(boundary.Points.Select(x => x.Location).ToList()), panelFrame.localPlane.Normal, -(dist), 5, CurveOffsetCornerStyle.Sharp);
 
             AreaMassProperties amp2 = AreaMassProperties.Compute(offsets[0]);
             if (amp2 == null || amp2.Area > amp.Area )
